@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CryptoSim Dashboard</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <script defer src="/static/script.js"></script>
+</head>
+<body>
+  <div class="navbar">
+    <h1>CryptoSim</h1>
+    <ul class="nav-tabs">
+      <li class="tab-link active" data-tab="send">Send</li>
+      <li class="tab-link" data-tab="mine">Mine</li>
+      <li class="tab-link" data-tab="balances">Balances</li>
+      <li class="tab-link" data-tab="explorer">Explorer</li>
+      <li class="tab-link" data-tab="history">History</li>
+    </ul>
+  </div>
+
+  <div class="tab-content">
+    
+    <div id="send" class="tab-pane active">
+      <h2>Send Cryptocurrency</h2>
+      <form action="/send" method="POST">
+        <input type="text" name="sender" placeholder="Sender Address" required />
+        <input type="text" name="recipient" placeholder="Recipient Address" required />
+        <input type="number" name="amount" placeholder="Amount" step="0.01" required />
+        <button type="submit">Send</button>
+      </form>
+    </div>
+
+    <div id="mine" class="tab-pane">
+      <h2>Mine a Block</h2>
+      <form action="/mine" method="POST">
+        <input type="text" name="miner" placeholder="Miner Address" required />
+        <button type="submit">Mine Block</button>
+      </form>
+    </div>
+
+    <div id="balances" class="tab-pane">
+      <h2>Balances</h2>
+      <div id="balanceList">Loading balances...</div>
+    </div>
+
+    <div id="explorer" class="tab-pane">
+      <h2>Blockchain Explorer</h2>
+      <div id="blockchainView">Loading blockchain...</div>
+    </div>
+
+    <div id="history" class="tab-pane">
+      <h2>Transaction History</h2>
+      <div id="transactionList">Loading transactions...</div>
+    </div>
+  </div>
+
+  <footer>
+    <p>CryptoSim © 2025 | Simulated Blockchain Environment</p>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,132 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(to right, #1f1c2c, #928dab);
+  color: #fff;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.navbar {
+  background-color: rgba(0, 0, 0, 0.7);
+  padding: 20px;
+  text-align: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.navbar h1 {
+  margin: 0;
+  font-size: 2.2em;
+  color: #f1f1f1;
+}
+
+.nav-tabs {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  margin-top: 15px;
+  gap: 20px;
+}
+
+.nav-tabs .tab-link {
+  cursor: pointer;
+  padding: 10px 20px;
+  border-radius: 5px;
+  background: #333;
+  transition: background 0.3s ease;
+}
+
+.nav-tabs .tab-link:hover,
+.nav-tabs .tab-link.active {
+  background: #0f9d58;
+}
+
+.tab-content {
+  flex-grow: 1;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+}
+
+.tab-pane {
+  display: none;
+  max-width: 700px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+}
+
+.tab-pane.active {
+  display: block;
+  animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+input, button {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  border: none;
+  border-radius: 5px;
+  font-size: 1em;
+}
+
+input {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+button {
+  background: #0f9d58;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+button:hover {
+  background: #0c7a43;
+}
+
+#balanceList, #blockchainView, #transactionList {
+  width: 100%;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 15px;
+  border-radius: 5px;
+  font-size: 0.9em;
+}
+
+footer {
+  padding: 20px;
+  text-align: center;
+  background: #111;
+  color: #aaa;
+  font-size: 0.85em;
+}
+
+@media screen and (max-width: 768px) {
+  .nav-tabs {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .tab-content {
+    padding: 15px;
+  }
+
+  input, button {
+    font-size: 0.95em;
+  }
+}
