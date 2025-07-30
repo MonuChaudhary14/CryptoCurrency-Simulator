@@ -1,143 +1,157 @@
-const tabs = document.querySelectorAll(".tab-link");
-const panes = document.querySelectorAll(".tab-pane");
-
-function clearTabs() {
-  tabs.forEach(t => t.classList.remove("active"));
-  panes.forEach(p => p.classList.remove("active"));
-}
-
-function showTab(tabId) {
-  clearTabs();
-  document.querySelector(`[data-tab='${tabId}']`).classList.add("active");
-  document.getElementById(tabId).classList.add("active");
-}
-
-tabs.forEach(tab => {
-  tab.addEventListener("click", () => {
-    showTab(tab.dataset.tab);
-    if (tab.dataset.tab === "balances") fetchBalances();
-    if (tab.dataset.tab === "explorer") fetchBlockchain();
-    if (tab.dataset.tab === "history") fetchTransactions();
-  });
-});
-
-// -----------------------------
-// Fetch Balances
-// -----------------------------
-async function fetchBalances() {
-  try {
-    const res = await fetch("/balances");
-    const data = await res.json();
-    const output = Object.entries(data)
-      .map(([user, bal]) => `<p><strong>${user}</strong>: ${bal.toFixed(2)} SIM</p>`)
-      .join("");
-    document.getElementById("balanceList").innerHTML = output || "No balances yet.";
-  } catch (e) {
-    document.getElementById("balanceList").innerText = "Failed to load balances.";
-  }
-}
-
-// -----------------------------
-// Fetch Blockchain
-// -----------------------------
-async function fetchBlockchain() {
-  try {
-    const res = await fetch("/chain");
-    const data = await res.json();
-    const output = data
-      .map(block => `
-        <div class='block'>
-          <p><strong>Block #${block.index}</strong></p>
-          <p><strong>Hash:</strong> ${block.hash}</p>
-          <p><strong>Prev:</strong> ${block.previous_hash}</p>
-          <p><strong>Nonce:</strong> ${block.nonce}</p>
-          <p><strong>Txns:</strong> ${block.transactions.length}</p>
-        </div>
-      `).join("<hr>");
-    document.getElementById("blockchainView").innerHTML = output || "Blockchain is empty.";
-  } catch (e) {
-    document.getElementById("blockchainView").innerText = "Failed to load blockchain.";
-  }
-}
-
-// -----------------------------
-// Fetch Transaction History
-// -----------------------------
-async function fetchTransactions() {
-  try {
-    const res = await fetch("/transactions");
-    const data = await res.json();
-    const output = data
-      .map(tx => `
-        <p><strong>${tx.sender}</strong> → <strong>${tx.recipient}</strong>:
-        ${tx.amount} SIM <small>(Block #${tx.block})</small></p>`
-      ).join("");
-    document.getElementById("transactionList").innerHTML = output || "No transactions yet.";
-  } catch (e) {
-    document.getElementById("transactionList").innerText = "Failed to load transactions.";
-  }
-}
-
-// -----------------------------
-// Auto Load Default Data
-// -----------------------------
-window.addEventListener("DOMContentLoaded", () => {
-  fetchBalances();
-  fetchBlockchain();
-  fetchTransactions();
-});
-
-
-
-document.addEventListener('click', function (e) {
-  const dropdown = document.querySelector('.user-dropdown .dropdown-content');
-  const button = document.querySelector('.dropbtn');
-  if (button.contains(e.target)) {
-    dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
-  } else {
-    dropdown.style.display = 'none';
-  }
-});
-
 document.addEventListener("DOMContentLoaded", () => {
-  const authSection = document.getElementById("auth-section");
+  const tabs = document.querySelectorAll(".tab-link");
+  const panes = document.querySelectorAll(".tab-pane");
+  const dropdown = document.querySelector(".user-dropdown .dropdown-content");
+  const dropbtn = document.querySelector(".user-dropdown .dropbtn");
 
-  // Simulate login status with localStorage
-  const isLoggedIn = localStorage.getItem("loggedIn") === "true";
+  // Utility to clear active classes
+  function clearTabs() {
+    tabs.forEach(t => t.classList.remove("active"));
+    panes.forEach(p => p.classList.remove("active"));
+  }
 
-  if (authSection) {
-    if (isLoggedIn) {
-      authSection.innerHTML = `
-        <div class="user-dropdown">
-          <button class="dropbtn">👤 Account ▾</button>
-          <div class="dropdown-content">
-            <a href="/profile">My Profile</a>
-            <form action="/logout" method="POST" style="margin: 0;">
-              <button type="submit" class="logout-btn">Logout</button>
-            </form>
-          </div>
-        </div>
-      `;
-    } else {
-      authSection.innerHTML = `
-        <div class="auth-links">
-          <div class = "login-dashboard"><a href="Login.html" >Login</a></div>
-          <div class = "signup-dashboard"><a href="Signup.html" >Sign Up</a></div>
-        </div>
-      `;
+  // Show tab content and load dynamic content if needed
+  function showTab(tabId) {
+    clearTabs();
+    const tab = document.querySelector(`.tab-link[data-tab="${tabId}"]`);
+    const pane = document.getElementById(tabId);
+    if (tab && pane) {
+      tab.classList.add("active");
+      pane.classList.add("active");
+
+      // Load tab-specific data
+      if (tabId === "balances") {
+        fetchBalances();
+      } else if (tabId === "explorer") {
+        fetchLatestBlock();
+      } else if (tabId === "transactions") {
+        fetchPendingTransactions();
+      }
     }
   }
-});
 
-
-  // Optional: Handle tab switching
-  document.querySelectorAll(".tab-link").forEach(tab => {
+  // Attach tab click event listeners
+  tabs.forEach(tab => {
     tab.addEventListener("click", () => {
-      document.querySelectorAll(".tab-link").forEach(t => t.classList.remove("active"));
-      document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
-      tab.classList.add("active");
-      document.getElementById(tab.dataset.tab).classList.add("active");
+      showTab(tab.dataset.tab);
     });
   });
 
+  // Show the initially active tab
+  const activeTab = document.querySelector(".tab-link.active");
+  if (activeTab) {
+    showTab(activeTab.dataset.tab);
+  }
 
+  // Fetch balances API and display
+  async function fetchBalances() {
+    const balanceList = document.getElementById("balanceList");
+    if (!balanceList) return;
+    balanceList.textContent = "Loading balances...";
+    try {
+      const res = await fetch("/balances");
+      if (!res.ok) throw new Error("Network response not ok");
+      const data = await res.json();
+      let html = "<ul>";
+      for (const [code, balance] of Object.entries(data)) {
+        html += `<li><strong>${code}</strong>: ${balance.toFixed(2)} SIM</li>`;
+      }
+      html += "</ul>";
+      balanceList.innerHTML = html;
+    } catch {
+      balanceList.textContent = "Failed to load balances.";
+    }
+  }
+
+  // Fetch latest block API and display
+  async function fetchLatestBlock() {
+    const blockDiv = document.getElementById("latestBlock");
+    if (!blockDiv) return;
+    blockDiv.textContent = "Loading latest block...";
+    try {
+      const res = await fetch("/chain");
+      if (!res.ok) throw new Error("Network response not ok");
+      const chain = await res.json();
+      if (chain.length === 0) {
+        blockDiv.textContent = "No blocks mined yet.";
+        return;
+      }
+      const block = chain[chain.length - 1];
+      let html = `<p><strong>Block #${block.index}</strong></p>`;
+      html += `<p><b>Hash:</b> ${block.hash}</p>`;
+      html += `<p><b>Previous Hash:</b> ${block.previous_hash}</p>`;
+      html += `<p><b>Nonce:</b> ${block.nonce}</p>`;
+      html += "<p><b>Transactions:</b></p><ul>";
+      if (block.transactions && block.transactions.length > 0) {
+        block.transactions.forEach(tx => {
+          html += `<li>From <strong>${tx.sender_code}</strong> to <strong>${tx.recipient_code}</strong>: ${tx.amount.toFixed(2)} SIM</li>`;
+        });
+      } else {
+        html += "<li>No transactions in this block.</li>";
+      }
+      html += "</ul>";
+      blockDiv.innerHTML = html;
+    } catch {
+      blockDiv.textContent = "Failed to load block data.";
+    }
+  }
+
+  // Fetch pending transactions API and display
+  async function fetchPendingTransactions() {
+    const txnDiv = document.getElementById("transactionList");
+    if (!txnDiv) return;
+    txnDiv.textContent = "Loading pending transactions...";
+    try {
+      const res = await fetch("/pending_transactions");
+      if (!res.ok) throw new Error("Network response not ok");
+      const txns = await res.json();
+      if (txns.length === 0) {
+        txnDiv.textContent = "No pending transactions.";
+        return;
+      }
+      let html = "<ul>";
+      txns.forEach(tx => {
+        html += `<li>From <strong>${tx.sender_code}</strong> to <strong>${tx.recipient_code}</strong>: ${tx.amount.toFixed(2)} SIM</li>`;
+      });
+      html += "</ul>";
+      txnDiv.innerHTML = html;
+    } catch {
+      txnDiv.textContent = "Failed to load transactions.";
+    }
+  }
+
+  // Toggle dropdown visibility in a controlled way using a CSS class for better style management
+  function toggleDropdown() {
+    if (!dropdown) return;
+    dropdown.classList.toggle("show");
+  }
+
+  // Hide dropdown
+  function closeDropdown() {
+    if (!dropdown) return;
+    dropdown.classList.remove("show");
+  }
+
+  // Toggle dropdown on button click
+  if (dropbtn) {
+    dropbtn.addEventListener("click", e => {
+      e.stopPropagation();
+      toggleDropdown();
+    });
+  }
+
+  // Close dropdown if clicking outside
+  document.addEventListener("click", e => {
+    if (!dropdown || !dropbtn) return;
+    if (!dropbtn.contains(e.target) && !dropdown.contains(e.target)) {
+      closeDropdown();
+    }
+  });
+
+  // (Optional) Close dropdown if Escape key pressed while dropdown is visible
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") {
+      closeDropdown();
+    }
+  });
+});

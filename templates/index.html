@@ -1,82 +1,187 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>CryptoSim</title>
-<link rel="stylesheet" href="\static\style.css">
+  <meta charset="UTF-8" />
+  <title>CryptoSim</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
 </head>
-<body>
-    <!-- Header Navigation -->
-    <nav class="navbar">
-        <div class="nav-container">
-            <!-- Left: Logo -->
-            <div class="navbar-title">
-                <h1>CryptoSim</h1>
-            </div>
-            <!-- Right: Auth links/user -->
-            <div class="auth-links">
-            {% if username %}
-                <div class="user-dropdown">
-                    <button class="dropbtn">{{ username }}</button>
-                    <div class="dropdown-content">
-                        <form action="{{ url_for('logout') }}" method="POST">
-                            <button type="submit" class="logout-btn">Logout</button>
-                        </form>
-                    </div>
-                </div>
-            {% else %}
-                <div class="login-dashboard"><a href="{{ url_for('login') }}">Login</a></div>
-                <div class="signup-dashboard"><a href="{{ url_for('signup') }}">Signup</a></div>
-            {% endif %}
-            </div>
-        </div>
-        <!-- Tabs centered below header -->
-        <ul class="nav-tabs">
-            <li class="tab-link active" data-tab="dashboard">Dashboard</li>
-            <li class="tab-link" data-tab="balances">Balances</li>
-            <li class="tab-link" data-tab="explorer">Chain Explorer</li>
-            <li class="tab-link" data-tab="history">Tx History</li>
-        </ul>
-    </nav>
+<body class="app-body">
 
-    <!-- Main Content -->
-    <div class="tab-content">
-        <div class="tab-pane active" id="dashboard">
-            <!-- Dashboard content, e.g., send coins, mine block -->
-            {% if username %}
-            <form action="{{ url_for('send') }}" method="POST">
-                <h3>Send SIM</h3>
-                <input type="hidden" name="sender" value="{{ username }}">
-                <input type="text" name="recipient" placeholder="Recipient" required>
-                <input type="number" name="amount" placeholder="Amount" min="0.01" step="0.01" required>
-                <button type="submit">Send</button>
-            </form>
-            <form action="{{ url_for('mine') }}" method="POST" style="margin-top:20px;">
-                <input type="hidden" name="miner" value="{{ username }}">
-                <button type="submit">Mine Block</button>
-            </form>
-            {% else %}
-            <div style="text-align:center; font-size:1.1em; padding:20px;">
-                Please <a href="{{ url_for('login') }}">login</a> or <a href="{{ url_for('signup') }}">signup</a> to use the platform.
-            </div>
-            {% endif %}
-        </div>
-        <div class="tab-pane" id="balances">
-            <h3>Balances</h3>
-            <div id="balanceList"></div>
-        </div>
-        <div class="tab-pane" id="explorer">
-            <h3>Blockchain Explorer</h3>
-            <div id="blockchainView"></div>
-        </div>
-        <div class="tab-pane" id="history">
-            <h3>Transaction History</h3>
-            <div id="transactionList"></div>
-        </div>
+<nav class="navbar">
+  <div class="nav-container">
+    <div class="navbar-title">
+      <h1 class="navbar-heading">CryptoSim</h1>
     </div>
-    <footer>
-        2025 CryptoSim. All rights reserved.
-    </footer>
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <div class="auth-links">
+      {% if username %}
+      <div class="user-dropdown" tabindex="0" aria-label="User menu">
+        <button class="dropbtn" aria-haspopup="true" aria-expanded="false">{{ username }}</button>
+        <div class="dropdown-content" role="menu" aria-hidden="true">
+          <a href="{{ url_for('profile') }}" class="drop-down-profile" role="menuitem">Profile</a>
+          <form action="{{ url_for('logout') }}" method="POST" role="menuitem" class="logout-form">
+            <button type="submit" class="logout-btn">Logout</button>
+          </form>
+        </div>
+      </div>
+      {% else %}
+      <div class="login-dashboard"><a href="{{ url_for('login') }}" class="login-link">Login</a></div>
+      <div class="signup-dashboard"><a href="{{ url_for('signup') }}" class="signup-link">Signup</a></div>
+      {% endif %}
+    </div>
+  </div>
+  <ul class="nav-tabs">
+    <li class="tab-link active" data-tab="dashboard">Dashboard</li>
+    <li class="tab-link" data-tab="balances">Balances</li>
+    <li class="tab-link" data-tab="explorer">Explorer</li>
+    <li class="tab-link" data-tab="transactions">Transactions</li>
+    <li class="tab-link" data-tab="mine">Mine</li>
+  </ul>
+</nav>
+
+<div class="tab-content">
+
+  <div class="tab-pane active" id="dashboard">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for msg in messages %}
+        <div class="flash-message">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    {% if username %}
+    <h3 class="form-title">Send SIM</h3>
+    <form action="{{ url_for('send') }}" method="POST" class="send-form">
+      <input type="text" name="recipient_code" placeholder="Recipient's Unique Code" required class="form-input" />
+      <input type="number" name="amount" placeholder="Amount to send" min="0.01" step="0.01" required class="form-input" />
+      <input type="password" name="tx_password" placeholder="Transaction Password" required class="form-input" />
+      <button type="submit" class="form-button">Send</button>
+    </form>
+    {% else %}
+    <p class="login-prompt">Please <a href="{{ url_for('login') }}" class="link">login</a> or <a href="{{ url_for('signup') }}" class="link">signup</a> to use the platform.</p>
+    {% endif %}
+  </div>
+
+  <div class="tab-pane" id="balances">
+    <h3 class="section-title">Balances</h3>
+    <div id="balanceList" class="balances-list">
+      Loading balances...
+    </div>
+  </div>
+
+  <div class="tab-pane" id="explorer">
+    <h3 class="section-title">Latest Block</h3>
+    <div id="latestBlock" class="latest-block">
+      Loading latest block...
+    </div>
+  </div>
+
+  <div class="tab-pane" id="transactions">
+    <h3 class="section-title">Pending Transactions</h3>
+    <div id="transactionList" class="transaction-list">
+      Loading pending transactions...
+    </div>
+  </div>
+
+  <div class="tab-pane" id="mine">
+    <h3 class="section-title">Mine Block</h3>
+    {% if username %}
+    <form action="{{ url_for('mine') }}" method="POST" class="mine-form">
+      <button type="submit" class="form-button mine-button">Mine Block (Earn 10 SIM)</button>
+    </form>
+    {% else %}
+    <p class="login-prompt">Please <a href="{{ url_for('login') }}" class="link">login</a> to mine blocks.</p>
+    {% endif %}
+  </div>
+
+</div>
+
+<footer class="footer">
+  &copy; 2025 CryptoSim. All rights reserved.
+</footer>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const tabs = document.querySelectorAll('.tab-link');
+    const panes = document.querySelectorAll('.tab-pane');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        panes.forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab).classList.add('active');
+
+        if (tab.dataset.tab === "balances") {
+          fetch('/balances').then(res => res.json()).then(data => {
+            let html = '<ul>';
+            for (const [code, balance] of Object.entries(data)) {
+              html += `<li><strong>${code}</strong>: ${balance.toFixed(2)} SIM</li>`;
+            }
+            html += '</ul>';
+            document.getElementById('balanceList').innerHTML = html;
+          }).catch(() => {
+            document.getElementById('balanceList').innerText = 'Failed to load balances.';
+          });
+        }
+
+        if (tab.dataset.tab === "explorer") {
+          fetch('/chain').then(res => res.json()).then(chain => {
+            if (chain.length === 0) {
+              document.getElementById('latestBlock').innerText = 'No blocks mined yet.';
+              return;
+            }
+            const block = chain[chain.length - 1];
+            let html = `<p><strong>Block #${block.index}</strong></p>`;
+            html += `<p>Hash: ${block.hash}</p>`;
+            html += `<p>Previous Hash: ${block.previous_hash}</p>`;
+            html += `<p>Nonce: ${block.nonce}</p>`;
+            html += '<p>Transactions:</p><ul>';
+            for (const tx of block.transactions) {
+              html += `<li>From <strong>${tx.sender_code}</strong> to <strong>${tx.recipient_code}</strong>: ${tx.amount.toFixed(2)} SIM</li>`;
+            }
+            html += '</ul>';
+            document.getElementById('latestBlock').innerHTML = html;
+          }).catch(() => {
+            document.getElementById('latestBlock').innerText = 'Failed to load block data.';
+          });
+        }
+
+        if (tab.dataset.tab === "transactions") {
+          fetch('/pending_transactions').then(res => res.json()).then(txns => {
+            if (txns.length === 0) {
+              document.getElementById('transactionList').innerText = 'No pending transactions.';
+              return;
+            }
+            let html = '<ul>';
+            for (const tx of txns) {
+              html += `<li>From <strong>${tx.sender_code}</strong> to <strong>${tx.recipient_code}</strong>: ${tx.amount.toFixed(2)} SIM</li>`;
+            }
+            html += '</ul>';
+            document.getElementById('transactionList').innerHTML = html;
+          }).catch(() => {
+            document.getElementById('transactionList').innerText = 'Failed to load transactions.';
+          });
+        }
+      });
+    });
+
+    // Initialize by clicking the first active tab
+    document.querySelector('.tab-link.active').click();
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const flash = document.querySelector('.flash');
+    if (flash) {
+      setTimeout(() => {
+        flash.classList.add('fade-out');
+        setTimeout(() => {
+          flash.remove();
+        }, 500);
+      }, 3000);
+    }
+  });
+</script>
+
 </body>
 </html>

@@ -1,237 +1,275 @@
-from flask import Flask, request, render_template, redirect, url_for, jsonify, session
-from flask_pymongo import PyMongo
-from werkzeug.security import generate_password_hash, check_password_hash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+import uuid
+import hashlib
 import json
-import time
-from hashlib import sha256
-from uuid import uuid4
-from collections import defaultdict
+from functools import wraps
+from pymongo import MongoClient
 
 app = Flask(__name__)
-app.config["MONGO_URI"] = "mongodb://localhost:27017/blockchain_db"
-app.secret_key = 'your_very_secret_key'
-mongo = PyMongo(app)
+app.secret_key = 'your-secret-key'
 
-# ------------------------
-# Blockchain Components
-# ------------------------
-class Block:
-    def __init__(self, index, timestamp, transactions, previous_hash, nonce=0):
-        self.index = index
-        self.timestamp = timestamp
-        self.transactions = transactions
-        self.previous_hash = previous_hash
-        self.nonce = nonce
-        self.hash = self.compute_hash()
+# MongoDB config
+MONGO_URI = "mongodb://localhost:27017"
+client = MongoClient(MONGO_URI)
+db = client['cryptosim_db']
 
-    def compute_hash(self):
-        block_string = json.dumps(self.__dict__, sort_keys=True)
-        return sha256(block_string.encode()).hexdigest()
+# Collections for users, blockchain, pending_transactions
+users_col = db['users']
+blockchain_col = db['blockchain']
+pending_tx_col = db['pending_transactions']
 
-class Blockchain:
-    def __init__(self):
-        self.chain = []
-        self.current_transactions = []
-        self.difficulty = 3
-        self.balances = defaultdict(float)
-        self.create_genesis_block()
+DIFFICULTY = 4  # Number of leading zeros required in hash
 
-    def create_genesis_block(self):
-        genesis_block = Block(0, time.time(), [], "0")
-        self.chain.append(genesis_block)
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'username' not in session:
+            flash("Please login first.")
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
-    def get_last_block(self):
-        return self.chain[-1]
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
 
-    def add_transaction(self, sender, recipient, amount):
-        amount = float(amount)
-        if sender != "MINER" and self.balances[sender] < amount:
-            return False
+def find_user(username):
+    return users_col.find_one({"username": username})
 
-        txn = {
-            'sender': sender,
-            'recipient': recipient,
-            'amount': amount,
-            'timestamp': time.time()
+def find_user_by_code(unique_code):
+    return users_col.find_one({"unique_code": unique_code})
+
+def get_last_block():
+    block = blockchain_col.find_one(sort=[("index", -1)])
+    if block:
+        return block
+    else:
+        # Genesis block if none exist
+        genesis_block = {
+            'index': 0,
+            'hash': '0' * 64,
+            'previous_hash': '0' * 64,
+            'nonce': 0,
+            'transactions': []
         }
+        blockchain_col.insert_one(genesis_block)
+        return genesis_block
 
-        self.current_transactions.append(txn)
+def proof_of_work(index, last_hash, transactions):
+    nonce = 0
+    transactions_str = json.dumps(transactions, sort_keys=True)
+    while True:
+        block_string = f"{index}{last_hash}{nonce}{transactions_str}"
+        block_hash = hashlib.sha256(block_string.encode()).hexdigest()
+        if block_hash.startswith('0' * DIFFICULTY):
+            return nonce, block_hash
+        nonce += 1
 
-        mongo.db.transactions.insert_one({
-            **txn,
-            'status': 'pending'
-        })
-
-        if sender != "MINER":
-            self.balances[sender] -= amount
-        self.balances[recipient] += amount
-        return True
-
-    def proof_of_work(self, block):
-        block.nonce = 0
-        block.hash = block.compute_hash()
-        while not block.hash.startswith('0' * self.difficulty):
-            block.nonce += 1
-            block.hash = block.compute_hash()
-        return block.hash
-
-    def mine_block(self, miner):
-        if not self.current_transactions:
-            return None
-        self.add_transaction("MINER", miner, 10.0)
-        last_block = self.get_last_block()
-        new_block = Block(index=last_block.index + 1,
-                          timestamp=time.time(),
-                          transactions=self.current_transactions[:],
-                          previous_hash=last_block.hash)
-        new_block.hash = self.proof_of_work(new_block)
-        self.chain.append(new_block)
-
-        for txn in new_block.transactions:
-            mongo.db.transactions.update_many(
-                {
-                    'sender': txn['sender'],
-                    'recipient': txn['recipient'],
-                    'timestamp': txn['timestamp']
-                },
-                {
-                    '$set': {
-                        'status': 'confirmed',
-                        'block_index': new_block.index
-                    }
-                }
-            )
-
-        mongo.db.blocks.insert_one(new_block.__dict__)
-        self.current_transactions = []
-        return new_block
-
-    def to_dict(self):
-        return [block.__dict__ for block in self.chain]
-
-    def get_transaction_history(self):
-        return list(mongo.db.transactions.find({}, {"_id": 0}))
-
-# ------------------------
-# App Initialization
-# ------------------------
-blockchain = Blockchain()
-blockchain.balances['alice'] = 50
-blockchain.balances['bob'] = 30
-blockchain.balances['carol'] = 20
-node_id = str(uuid4()).replace('-', '')
-
-# ------------------------
-# Authentication Routes
-# ------------------------
+@app.route('/')
+def index():
+    username = session.get('username')
+    # Load all users for display (hide sensitive data)
+    users_cursor = users_col.find({}, {"_id":0, "password_hash":0, "tx_password_hash":0})
+    users = {u['username']: u for u in users_cursor}
+    return render_template('index.html', username=username, users=users)
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
-        username = request.form['username']
-        email = request.form['email']
-        password = request.form['password']
+        username = request.form.get('username', '').strip()
+        email = request.form.get('email', '').strip()
+        password = request.form.get('password', '')
+        confirm_password = request.form.get('confirmPassword', '')
+        tx_password = request.form.get('tx_password', '')
 
-        existing_user = mongo.db.users.find_one({'email': email})
-        if existing_user:
-            return "Email already registered."
+        if not all([username, email, password, confirm_password, tx_password]):
+            flash("All fields are required")
+            return redirect(url_for('signup'))
 
-        hashed_pw = generate_password_hash(password)
-        mongo.db.users.insert_one({
-            'username': username,
-            'email': email,
-            'password': hashed_pw
-        })
-        session['user'] = username
-        return redirect(url_for('index'))
-    return render_template('Signup.html')
+        if password != confirm_password:
+            flash("Passwords do not match")
+            return redirect(url_for('signup'))
+
+        if find_user(username):
+            flash("Username already exists")
+            return redirect(url_for('signup'))
+
+        unique_code = str(uuid.uuid4())[:8]
+        user_doc = {
+            "username": username,
+            "email": email,
+            "password_hash": hash_password(password),
+            "tx_password_hash": hash_password(tx_password),
+            "unique_code": unique_code,
+            "balance": 50.0
+        }
+        users_col.insert_one(user_doc)
+
+        flash(f"Account created! Your unique code is: {unique_code}")
+        return redirect(url_for('login'))
+
+    return render_template('signup.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        email = request.form['email']
-        password = request.form['password']
-        user = mongo.db.users.find_one({'email': email})
-
-        if user and check_password_hash(user['password'], password):
-            session['user'] = user['username']
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+        user = find_user(username)
+        if user and hash_password(password) == user['password_hash']:
+            session['username'] = username
+            flash("Logged in successfully.")
             return redirect(url_for('index'))
         else:
-            return "Invalid email or password."
-    return render_template('Login.html')
-
+            flash("Invalid username or password.")
+            return redirect(url_for('login'))
+    return render_template('login.html')
 
 @app.route('/logout', methods=['POST'])
+@login_required
 def logout():
-    session.pop('user', None)
+    session.pop('username', None)
+    flash("Logged out.")
     return redirect(url_for('index'))
-
-
-# ------------------------
-# Main Dashboard Route
-# ------------------------
-@app.route('/')
-def index():
-    username = session.get('user')
-    return render_template('index.html', balances=blockchain.balances, username=username)
-
-
-# ------------------------
-# Blockchain Routes
-# ------------------------
 
 @app.route('/send', methods=['POST'])
+@login_required
 def send():
-    sender = request.form['sender']
-    recipient = request.form['recipient']
-    amount = request.form['amount']
-    success = blockchain.add_transaction(sender, recipient, amount)
-    if not success:
-        return "Insufficient funds!", 400
+    sender = session['username']
+    user = find_user(sender)
+    recipient_code = request.form.get('recipient_code', '').strip()
+    amount_str = request.form.get('amount', '')
+    tx_password = request.form.get('tx_password', '')
+
+    if not recipient_code or not amount_str or not tx_password:
+        flash("All fields are required for transaction.")
+        return redirect(url_for('index'))
+
+    try:
+        amount = float(amount_str)
+        if amount <= 0:
+            flash("Amount must be positive.")
+            return redirect(url_for('index'))
+    except ValueError:
+        flash("Invalid amount.")
+        return redirect(url_for('index'))
+
+    if hash_password(tx_password) != user['tx_password_hash']:
+        flash("Incorrect transaction password.")
+        return redirect(url_for('index'))
+
+    recipient = find_user_by_code(recipient_code)
+    if not recipient:
+        flash("Recipient unique code not found.")
+        return redirect(url_for('index'))
+
+    if user['balance'] < amount:
+        flash("Insufficient balance.")
+        return redirect(url_for('index'))
+
+    # Insert transaction to pending transactions collection
+    pending_tx_col.insert_one({
+        'sender_code': user['unique_code'],
+        'recipient_code': recipient_code,
+        'amount': amount
+    })
+
+    flash("Transaction added to pending list.")
     return redirect(url_for('index'))
+
+@app.route('/profile')
+@login_required
+def profile():
+    username = session['username']
+    user = find_user(username)
+
+    # If you want to add Name separately during signup, you can store/retrieve it here.
+    # For now, let's use 'email' field as Name if you prefer.
+    name = user.get('email', '')
+
+    return render_template('profile.html', username=username, name=name, unique_code=user['unique_code'])
+
 
 @app.route('/mine', methods=['POST'])
+@login_required
 def mine():
-    miner = request.form['miner']
-    new_block = blockchain.mine_block(miner)
-    if not new_block:
-        return "Nothing to mine!"
+    miner = session['username']
+    user = find_user(miner)
+    
+    # Load all pending transactions
+    pending_txs = list(pending_tx_col.find({}))
+    
+    # Validate all pending transactions (skip invalid)
+    valid_transactions = []
+    for tx in pending_txs:
+        sender = users_col.find_one({'unique_code': tx['sender_code']})
+        recipient = users_col.find_one({'unique_code': tx['recipient_code']})
+        if sender and recipient and sender['balance'] >= tx['amount']:
+            valid_transactions.append(tx)
+    
+    # Atomically apply transactions and update user balances
+    for tx in valid_transactions:
+        users_col.update_one({'unique_code': tx['sender_code']}, {'$inc': {'balance': -tx['amount']}})
+        users_col.update_one({'unique_code': tx['recipient_code']}, {'$inc': {'balance': tx['amount']}})
+
+    # Mining reward: add 10 SIM to miner
+    users_col.update_one({'username': miner}, {'$inc': {'balance': 10}})
+
+    last_block = get_last_block()
+    index = last_block['index'] + 1
+    # Convert transactions to dicts without ObjectId for storage in block
+    tx_list = [{k: v for k, v in tx.items() if k != '_id'} for tx in valid_transactions]
+
+    nonce, block_hash = proof_of_work(index, last_block['hash'], tx_list)
+
+    new_block = {
+        'index': index,
+        'hash': block_hash,
+        'previous_hash': last_block['hash'],
+        'nonce': nonce,
+        'transactions': tx_list
+    }
+
+    blockchain_col.insert_one(new_block)
+
+    # Remove confirmed valid transactions from pending collection
+    for tx in valid_transactions:
+        pending_tx_col.delete_one({'_id': tx['_id']})
+
+    flash(f"Block mined! You earned 10 SIM. Proof of Work nonce: {nonce}")
     return redirect(url_for('index'))
 
-@app.route('/chain')
-def get_chain():
-    return jsonify(blockchain.to_dict())
+# API routes to fetch data from DB
 
 @app.route('/balances')
-def get_balances():
-    return jsonify(blockchain.balances)
+@login_required
+def balances_api():
+    # Return balances as JSON mapping unique_code: balance
+    users_cursor = users_col.find({}, {"_id":0, "unique_code":1, "balance":1})
+    result = {}
+    for u in users_cursor:
+        result[u['unique_code']] = u['balance']
+    return jsonify(result)
+
+@app.route('/chain')
+@login_required
+def chain_api():
+    blocks = list(blockchain_col.find({}, {"_id":0}).sort("index", 1))
+    return jsonify(blocks)
+
+@app.route('/pending_transactions')
+@login_required
+def pending_transactions_api():
+    txs = list(pending_tx_col.find({}, {"_id":0}))
+    return jsonify(txs)
 
 @app.route('/transactions')
-def get_transactions():
-    return jsonify(blockchain.get_transaction_history())
+@login_required
+def transactions():
+    username = session['username']
+    pending_txs = list(pending_tx_col.find({}))
+    users_cursor = users_col.find({}, {"_id":0, "username":1, "unique_code":1})
+    users_map = {u['username']: u for u in users_cursor}
+    return render_template('transactions.html', username=username, users=users_map, pending_transactions=pending_txs)
 
-@app.route('/api/send', methods=['POST'])
-def api_send():
-    data = request.get_json()
-    if not all(k in data for k in ('sender', 'recipient', 'amount')):
-        return jsonify({"error": "Missing fields"}), 400
-    success = blockchain.add_transaction(data['sender'], data['recipient'], data['amount'])
-    if not success:
-        return jsonify({"error": "Insufficient balance"}), 400
-    return jsonify({"message": "Transaction added"}), 201
-
-@app.route('/api/mine', methods=['POST'])
-def api_mine():
-    data = request.get_json()
-    if 'miner' not in data:
-        return jsonify({"error": "Miner address required"}), 400
-    block = blockchain.mine_block(data['miner'])
-    if not block:
-        return jsonify({"error": "No transactions to mine"}), 400
-    return jsonify(block.__dict__), 201
-
-# ------------------------
-# Run App
-# ------------------------
 if __name__ == '__main__':
     app.run(debug=True)
