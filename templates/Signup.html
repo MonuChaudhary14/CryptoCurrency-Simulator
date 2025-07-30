@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign Up | CryptoCurrency Simulator</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1f2937, #4b5563);
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .signup-container {
+      background-color: #111827;
+      padding: 2.5rem;
+      border-radius: 1rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      width: 90%;
+      max-width: 450px;
+      text-align: center;
+    }
+
+    .signup-container h1 {
+      margin-bottom: 1rem;
+      font-size: 1.8rem;
+      color: #3b82f6;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    input {
+      padding: 0.75rem;
+      border: none;
+      border-radius: 0.5rem;
+      background-color: #374151;
+      color: white;
+      font-size: 1rem;
+    }
+
+    input::placeholder {
+      color: #9ca3af;
+    }
+
+    button {
+      padding: 0.75rem;
+      border: none;
+      background-color: #3b82f6;
+      color: white;
+      font-weight: bold;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #2563eb;
+    }
+
+    .signup-footer {
+      margin-top: 1rem;
+      font-size: 0.9rem;
+      color: #9ca3af;
+    }
+
+    .signup-footer a {
+      color: #60a5fa;
+      text-decoration: none;
+    }
+
+    .signup-footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="signup-container">
+    <h1>Create Account</h1>
+    <form action="/signup" method="POST">
+      <input type="text" name="username" placeholder="Username" required />
+      <input type="email" name="email" placeholder="Email Address" required />
+      <input type="password" name="password" placeholder="Password" required />
+      <input type="password" name="confirmPassword" placeholder="Confirm Password" required oninput="validatePassword()" />
+      <button type="submit">Sign Up</button>
+    </form>
+    <div class="signup-footer">
+      Already have an account? <a href="/login">Login</a>
+    </div>
+  </div>
+
+  <script>
+    function validatePassword() {
+      const pw = document.querySelector('input[name="password"]').value;
+      const cpw = document.querySelector('input[name="confirmPassword"]').value;
+      if (pw && cpw && pw !== cpw) {
+        document.querySelector('input[name="confirmPassword"]').setCustomValidity("Passwords do not match");
+      } else {
+        document.querySelector('input[name="confirmPassword"]').setCustomValidity("");
+      }
+    }
+  </script>
+</body>
+</html>

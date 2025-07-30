@@ -86,3 +86,58 @@ window.addEventListener("DOMContentLoaded", () => {
   fetchBlockchain();
   fetchTransactions();
 });
+
+
+
+document.addEventListener('click', function (e) {
+  const dropdown = document.querySelector('.user-dropdown .dropdown-content');
+  const button = document.querySelector('.dropbtn');
+  if (button.contains(e.target)) {
+    dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+  } else {
+    dropdown.style.display = 'none';
+  }
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+  const authSection = document.getElementById("auth-section");
+
+  // Simulate login status with localStorage
+  const isLoggedIn = localStorage.getItem("loggedIn") === "true";
+
+  if (authSection) {
+    if (isLoggedIn) {
+      authSection.innerHTML = `
+        <div class="user-dropdown">
+          <button class="dropbtn">👤 Account ▾</button>
+          <div class="dropdown-content">
+            <a href="/profile">My Profile</a>
+            <form action="/logout" method="POST" style="margin: 0;">
+              <button type="submit" class="logout-btn">Logout</button>
+            </form>
+          </div>
+        </div>
+      `;
+    } else {
+      authSection.innerHTML = `
+        <div class="auth-links">
+          <div class = "login-dashboard"><a href="Login.html" >Login</a></div>
+          <div class = "signup-dashboard"><a href="Signup.html" >Sign Up</a></div>
+        </div>
+      `;
+    }
+  }
+});
+
+
+  // Optional: Handle tab switching
+  document.querySelectorAll(".tab-link").forEach(tab => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".tab-link").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
+      tab.classList.add("active");
+      document.getElementById(tab.dataset.tab).classList.add("active");
+    });
+  });
+
+

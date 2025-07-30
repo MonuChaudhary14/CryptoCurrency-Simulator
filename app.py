@@ -1,5 +1,6 @@
-from flask import Flask, request, render_template, redirect, url_for, jsonify
+from flask import Flask, request, render_template, redirect, url_for, jsonify, session
 from flask_pymongo import PyMongo
+from werkzeug.security import generate_password_hash, check_password_hash
 import json
 import time
 from hashlib import sha256
@@ -8,6 +9,7 @@ from collections import defaultdict
 
 app = Flask(__name__)
 app.config["MONGO_URI"] = "mongodb://localhost:27017/blockchain_db"
+app.secret_key = 'your_very_secret_key'
 mongo = PyMongo(app)
 
 # ------------------------
@@ -100,18 +102,15 @@ class Blockchain:
                 }
             )
 
-        # Save block to MongoDB
         mongo.db.blocks.insert_one(new_block.__dict__)
         self.current_transactions = []
-
         return new_block
 
     def to_dict(self):
         return [block.__dict__ for block in self.chain]
 
     def get_transaction_history(self):
-        history = list(mongo.db.transactions.find({}, {"_id": 0}))
-        return history
+        return list(mongo.db.transactions.find({}, {"_id": 0}))
 
 # ------------------------
 # App Initialization
@@ -123,11 +122,63 @@ blockchain.balances['carol'] = 20
 node_id = str(uuid4()).replace('-', '')
 
 # ------------------------
-# Flask Routes
+# Authentication Routes
+# ------------------------
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        username = request.form['username']
+        email = request.form['email']
+        password = request.form['password']
+
+        existing_user = mongo.db.users.find_one({'email': email})
+        if existing_user:
+            return "Email already registered."
+
+        hashed_pw = generate_password_hash(password)
+        mongo.db.users.insert_one({
+            'username': username,
+            'email': email,
+            'password': hashed_pw
+        })
+        session['user'] = username
+        return redirect(url_for('index'))
+    return render_template('Signup.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        user = mongo.db.users.find_one({'email': email})
+
+        if user and check_password_hash(user['password'], password):
+            session['user'] = user['username']
+            return redirect(url_for('index'))
+        else:
+            return "Invalid email or password."
+    return render_template('Login.html')
+
+
+@app.route('/logout', methods=['POST'])
+def logout():
+    session.pop('user', None)
+    return redirect(url_for('index'))
+
+
+# ------------------------
+# Main Dashboard Route
 # ------------------------
 @app.route('/')
 def index():
-    return render_template('index.html', balances=blockchain.balances)
+    username = session.get('user')
+    return render_template('index.html', balances=blockchain.balances, username=username)
+
+
+# ------------------------
+# Blockchain Routes
+# ------------------------
 
 @app.route('/send', methods=['POST'])
 def send():
@@ -179,5 +230,8 @@ def api_mine():
         return jsonify({"error": "No transactions to mine"}), 400
     return jsonify(block.__dict__), 201
 
+# ------------------------
+# Run App
+# ------------------------
 if __name__ == '__main__':
     app.run(debug=True)

@@ -1,62 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CryptoSim Dashboard</title>
-  <link rel="stylesheet" href="/static/style.css" />
-  <script defer src="/static/script.js"></script>
+    <meta charset="UTF-8">
+    <title>CryptoSim</title>
+<link rel="stylesheet" href="\static\style.css">
 </head>
 <body>
-  <div class="navbar">
-    <h1>CryptoSim</h1>
-    <ul class="nav-tabs">
-      <li class="tab-link active" data-tab="send">Send</li>
-      <li class="tab-link" data-tab="mine">Mine</li>
-      <li class="tab-link" data-tab="balances">Balances</li>
-      <li class="tab-link" data-tab="explorer">Explorer</li>
-      <li class="tab-link" data-tab="history">History</li>
-    </ul>
-  </div>
+    <!-- Header Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <!-- Left: Logo -->
+            <div class="navbar-title">
+                <h1>CryptoSim</h1>
+            </div>
+            <!-- Right: Auth links/user -->
+            <div class="auth-links">
+            {% if username %}
+                <div class="user-dropdown">
+                    <button class="dropbtn">{{ username }}</button>
+                    <div class="dropdown-content">
+                        <form action="{{ url_for('logout') }}" method="POST">
+                            <button type="submit" class="logout-btn">Logout</button>
+                        </form>
+                    </div>
+                </div>
+            {% else %}
+                <div class="login-dashboard"><a href="{{ url_for('login') }}">Login</a></div>
+                <div class="signup-dashboard"><a href="{{ url_for('signup') }}">Signup</a></div>
+            {% endif %}
+            </div>
+        </div>
+        <!-- Tabs centered below header -->
+        <ul class="nav-tabs">
+            <li class="tab-link active" data-tab="dashboard">Dashboard</li>
+            <li class="tab-link" data-tab="balances">Balances</li>
+            <li class="tab-link" data-tab="explorer">Chain Explorer</li>
+            <li class="tab-link" data-tab="history">Tx History</li>
+        </ul>
+    </nav>
 
-  <div class="tab-content">
-    
-    <div id="send" class="tab-pane active">
-      <h2>Send Cryptocurrency</h2>
-      <form action="/send" method="POST">
-        <input type="text" name="sender" placeholder="Sender Address" required />
-        <input type="text" name="recipient" placeholder="Recipient Address" required />
-        <input type="number" name="amount" placeholder="Amount" step="0.01" required />
-        <button type="submit">Send</button>
-      </form>
+    <!-- Main Content -->
+    <div class="tab-content">
+        <div class="tab-pane active" id="dashboard">
+            <!-- Dashboard content, e.g., send coins, mine block -->
+            {% if username %}
+            <form action="{{ url_for('send') }}" method="POST">
+                <h3>Send SIM</h3>
+                <input type="hidden" name="sender" value="{{ username }}">
+                <input type="text" name="recipient" placeholder="Recipient" required>
+                <input type="number" name="amount" placeholder="Amount" min="0.01" step="0.01" required>
+                <button type="submit">Send</button>
+            </form>
+            <form action="{{ url_for('mine') }}" method="POST" style="margin-top:20px;">
+                <input type="hidden" name="miner" value="{{ username }}">
+                <button type="submit">Mine Block</button>
+            </form>
+            {% else %}
+            <div style="text-align:center; font-size:1.1em; padding:20px;">
+                Please <a href="{{ url_for('login') }}">login</a> or <a href="{{ url_for('signup') }}">signup</a> to use the platform.
+            </div>
+            {% endif %}
+        </div>
+        <div class="tab-pane" id="balances">
+            <h3>Balances</h3>
+            <div id="balanceList"></div>
+        </div>
+        <div class="tab-pane" id="explorer">
+            <h3>Blockchain Explorer</h3>
+            <div id="blockchainView"></div>
+        </div>
+        <div class="tab-pane" id="history">
+            <h3>Transaction History</h3>
+            <div id="transactionList"></div>
+        </div>
     </div>
-
-    <div id="mine" class="tab-pane">
-      <h2>Mine a Block</h2>
-      <form action="/mine" method="POST">
-        <input type="text" name="miner" placeholder="Miner Address" required />
-        <button type="submit">Mine Block</button>
-      </form>
-    </div>
-
-    <div id="balances" class="tab-pane">
-      <h2>Balances</h2>
-      <div id="balanceList">Loading balances...</div>
-    </div>
-
-    <div id="explorer" class="tab-pane">
-      <h2>Blockchain Explorer</h2>
-      <div id="blockchainView">Loading blockchain...</div>
-    </div>
-
-    <div id="history" class="tab-pane">
-      <h2>Transaction History</h2>
-      <div id="transactionList">Loading transactions...</div>
-    </div>
-  </div>
-
-  <footer>
-    <p>CryptoSim © 2025 | Simulated Blockchain Environment</p>
-  </footer>
+    <footer>
+        2025 CryptoSim. All rights reserved.
+    </footer>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
