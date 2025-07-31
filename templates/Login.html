@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - CryptoSim</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-      <style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - CryptoSim</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
     body {
       margin: 0;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -16,6 +17,7 @@
       align-items: center;
       height: 100vh;
     }
+
     .login-container {
       background-color: #111827;
       padding: 2.5rem;
@@ -25,16 +27,19 @@
       max-width: 400px;
       text-align: center;
     }
+
     .login-container h1 {
       margin-bottom: 1rem;
       font-size: 1.8rem;
       color: #3b82f6;
     }
+
     form {
       display: flex;
       flex-direction: column;
       gap: 1rem;
     }
+
     input {
       padding: 0.75rem;
       border: none;
@@ -43,9 +48,11 @@
       color: white;
       font-size: 1rem;
     }
+
     input::placeholder {
       color: #9ca3af;
     }
+
     button {
       padding: 0.75rem;
       border: none;
@@ -57,21 +64,26 @@
       font-size: 1rem;
       transition: background-color 0.3s;
     }
+
     button:hover {
       background-color: #2563eb;
     }
+
     .login-footer {
       margin-top: 1rem;
       font-size: 0.9rem;
       color: #9ca3af;
     }
+
     .login-footer a {
       color: #60a5fa;
       text-decoration: none;
     }
+
     .login-footer a:hover {
       text-decoration: underline;
     }
+
     .flash {
       background: #6e3;
       color: #222;
@@ -81,56 +93,58 @@
     }
   </style>
 </head>
+
 <body class="app-body">
-    <div class="navbar">
-        <div class="nav-container">
-            <div class="navbar-title">
-                <h1 class="navbar-heading">CryptoSim</h1>
-            </div>
-            <div class="auth-links">
-                <div class="signup-dashboard"><a href="{{ url_for('signup') }}" class="signup-link">Signup</a></div>
-            </div>
-        </div>
+  <div class="navbar">
+    <div class="nav-container">
+      <div class="navbar-title">
+        <h1 class="navbar-heading">CryptoSim</h1>
+      </div>
+      <div class="auth-links">
+        <div class="signup-dashboard"><a href="{{ url_for('signup') }}" class="signup-link">Signup</a></div>
+      </div>
     </div>
+  </div>
 
-    <div class="tab-content">
-        <div class="tab-pane active">
-            {% with messages = get_flashed_messages() %}
-                {% if messages %}
-                    {% for msg in messages %}
-                        <div class="flash-message">{{ msg }}</div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-            
-            <h3 class="form-title">Login to CryptoSim</h3>
-            <form action="{{ url_for('login') }}" method="POST" class="send-form">
-                <input type="text" name="username" placeholder="Username" required class="form-input" />
-                <input type="password" name="password" placeholder="Password" required class="form-input" />
-                <button type="submit" class="form-button">Login</button>
-            </form>
-            
-            <p class="login-prompt">Don't have an account? <a href="{{ url_for('signup') }}" class="link">Sign up here</a></p>
-        </div>
+  <div class="tab-content">
+    <div class="tab-pane active">
+      {% with messages = get_flashed_messages() %}
+      {% if messages %}
+      {% for msg in messages %}
+      <div class="flash-message">{{ msg }}</div>
+      {% endfor %}
+      {% endif %}
+      {% endwith %}
+
+      <h3 class="form-title">Login to CryptoSim</h3>
+      <form action="{{ url_for('login') }}" method="POST" class="send-form">
+        <input type="text" name="username" placeholder="Username" required class="form-input" />
+        <input type="password" name="password" placeholder="Password" required class="form-input" />
+        <button type="submit" class="form-button">Login</button>
+      </form>
+
+      <p class="login-prompt">Don't have an account? <a href="{{ url_for('signup') }}" class="link">Sign up here</a></p>
     </div>
+  </div>
 
-    <footer class="footer">
-        &copy; 2025 CryptoSim. All rights reserved.
-    </footer>
+  <footer class="footer">
+    &copy; 2025 CryptoSim. All rights reserved.
+  </footer>
 
-    <script>
-        // Auto-hide flash messages after 3 seconds
-        document.addEventListener('DOMContentLoaded', () => {
-            const flashMessages = document.querySelectorAll('.flash-message');
-            flashMessages.forEach(flash => {
-                setTimeout(() => {
-                    flash.classList.add('fade-out');
-                    setTimeout(() => {
-                        flash.remove();
-                    }, 500);
-                }, 3000);
-            });
-        });
-    </script>
+  <script>
+    // Auto-hide flash messages after 3 seconds
+    document.addEventListener('DOMContentLoaded', () => {
+      const flashMessages = document.querySelectorAll('.flash-message');
+      flashMessages.forEach(flash => {
+        setTimeout(() => {
+          flash.classList.add('fade-out');
+          setTimeout(() => {
+            flash.remove();
+          }, 500);
+        }, 3000);
+      });
+    });
+  </script>
 </body>
+
 </html>

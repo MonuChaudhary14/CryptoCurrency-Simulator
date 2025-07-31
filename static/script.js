@@ -1,10 +1,13 @@
 document.addEventListener("DOMContentLoaded", () => {
+  // Tab elements and content panes
   const tabs = document.querySelectorAll(".tab-link");
   const panes = document.querySelectorAll(".tab-pane");
+
+  // Username dropdown elements
   const dropdown = document.querySelector(".user-dropdown .dropdown-content");
   const dropbtn = document.querySelector(".user-dropdown .dropbtn");
 
-  // Auto-hide flash messages after 3 seconds
+  // Flash messages auto-hide
   document.querySelectorAll('.flash-message').forEach(flash => {
     setTimeout(() => {
       flash.classList.add('fade-out');
@@ -12,352 +15,336 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 3000);
   });
 
-  // Toggle dropdown menu
-  if (dropbtn) {
+  // Username dropdown toggle
+  if (dropbtn && dropdown) {
     dropbtn.addEventListener('click', e => {
       e.stopPropagation();
+      const expanded = dropbtn.getAttribute('aria-expanded') === 'true';
+      dropbtn.setAttribute('aria-expanded', !expanded);
+      const isHidden = dropdown.getAttribute('aria-hidden') === 'true';
+      dropdown.setAttribute('aria-hidden', !isHidden);
       dropdown.classList.toggle('show');
     });
-  }
-  document.addEventListener('click', () => {
-    if (dropdown) dropdown.classList.remove('show');
-  });
-  document.addEventListener('keydown', e => {
-    if (e.key === "Escape") {
-      if (document.getElementById('blockModal')) document.getElementById('blockModal').style.display = 'none';
-      if (document.getElementById('miningModal')) document.getElementById('miningModal').style.display = 'none';
-      if (dropdown) dropdown.classList.remove('show');
-    }
-  });
 
-  // Clear active tabs/panes
-  function clearTabs() {
+    // Hide dropdown on outside click
+    document.addEventListener('click', () => {
+      if (dropdown.classList.contains('show')) {
+        dropdown.classList.remove('show');
+        dropbtn.setAttribute('aria-expanded', false);
+        dropdown.setAttribute('aria-hidden', true);
+      }
+    });
+
+    // Hide dropdown on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && dropdown.classList.contains('show')) {
+        dropdown.classList.remove('show');
+        dropbtn.setAttribute('aria-expanded', false);
+        dropdown.setAttribute('aria-hidden', true);
+        dropbtn.focus();
+      }
+    });
+  }
+
+  // Clear all active tabs and panes
+  function clearActive() {
     tabs.forEach(t => t.classList.remove('active'));
     panes.forEach(p => p.classList.remove('active'));
   }
 
-  // Show a specific tab and load relevant content
-  async function showTab(tabId) {
-    clearTabs();
-    const tab = document.querySelector(`.tab-link[data-tab="${tabId}"]`);
-    const pane = document.getElementById(tabId);
+  // Show selected tab and load data if needed
+  async function showTab(tabID) {
+    clearActive();
+    const tab = document.querySelector(`.tab-link[data-tab="${tabID}"]`);
+    const pane = document.getElementById(tabID);
     if (tab && pane) {
       tab.classList.add('active');
       pane.classList.add('active');
-
-      switch(tabId) {
+      switch (tabID) {
         case 'balances':
           await fetchBalances();
           break;
         case 'transactions':
-          await fetchBlockchain();
+          await loadBlockchainVisual();
           break;
         case 'pending':
           await fetchPendingTransactions();
           break;
-        case 'search':
-          // nothing to do initially
-          break;
-        case 'history':
-          await loadProfileHistory();
-          break;
-        default:
-          break;
+        // No auto load for search and mine tabs
       }
     }
   }
 
-  // Attach tab click listeners
+  // Attach click events to tabs
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
       showTab(tab.dataset.tab);
     });
   });
 
-  // Activate first tab on page load
-  const initialTab = document.querySelector('.tab-link.active');
+  // Initialize first active tab on page load
+  const initialTab = document.querySelector(".tab-link.active");
   if (initialTab) showTab(initialTab.dataset.tab);
 
+  // --- Fetch and display balances as a table ---
   async function fetchBalances() {
     const container = document.getElementById('balanceList');
     if (!container) return;
     container.textContent = 'Loading balances...';
     try {
       const res = await fetch('/balances');
-      if (!res.ok) throw new Error('Failed to get balances');
+      if (!res.ok) throw new Error('Failed to load balances');
       const data = await res.json();
-      let html = '<ul>';
-      for (const [code, bal] of Object.entries(data)) {
-        html += `<li><strong>${code}</strong>: ${bal.toFixed(2)} SIM</li>`;
-      }
-      html += '</ul>';
-      container.innerHTML = html;
-    } catch {
-      container.textContent = 'Failed to load balances.';
-    }
-  }
-
-  async function fetchBlockchain() {
-    const container = document.getElementById('blockchainContainer');
-    if (!container) return;
-    container.textContent = 'Loading blockchain...';
-    try {
-      const res = await fetch('/chain');
-      if (!res.ok) throw new Error('Failed to get chain');
-      const blocks = await res.json();
-      if (blocks.length === 0) {
-        container.textContent = 'Blockchain is empty.';
-        return;
-      }
-      let html = '<div class="blockchain-chain">';
-      blocks.forEach((block, idx) => {
-        const isGenesis = block.index === 0;
-        html += `
-          <div class="block ${isGenesis ? 'genesis' : ''}" tabindex="0" role="button" onclick="showBlockDetails(${block.index})" aria-label="View details of block ${block.index}">
-            <div class="block-header">Block #${block.index}</div>
-            <div class="block-info">
-              <div><strong>Hash:</strong></div>
-              <div class="block-hash">${block.hash.substring(0,16)}...</div>
-              <div><strong>Nonce:</strong> ${block.nonce}</div>
-              <div><strong>Transactions:</strong> ${block.transactions.length}</div>
-              ${block.mining_time ? `<div><strong>Time:</strong> ${block.mining_time.toFixed(2)}s</div>` : ''}
-            </div>
-          </div>`;
-        if (idx < blocks.length - 1) {
-          html += '<div class="blockchain-arrow" aria-hidden="true">→</div>';
+      // data is assumed to be a dictionary {code: balance}
+      let html = `<table class="balances-table"><thead><tr><th>Unique ID</th><th>Balance (SIM)</th></tr></thead><tbody>`;
+      if (Object.keys(data).length === 0) {
+        html += `<tr><td colspan="2" style="text-align:center;">No balances found.</td></tr>`;
+      } else {
+        for (const [code, balance] of Object.entries(data)) {
+          html += `<tr><td>${code}</td><td>${balance.toFixed(2)}</td></tr>`;
         }
-      });
-      html += '</div>';
+      }
+      html += `</tbody></table>`;
       container.innerHTML = html;
-    } catch {
-      container.textContent = 'Failed to load blockchain data.';
+    } catch (err) {
+      container.textContent = 'Error loading balances.';
     }
   }
 
+  // --- Fetch and display pending transactions ---
   async function fetchPendingTransactions() {
-    const container = document.getElementById('pendingTransactionsContainer');
+    const container = document.getElementById('pendingTxList');
     if (!container) return;
     container.textContent = 'Loading pending transactions...';
     try {
-      const res = await fetch('/pending_transactions');
-      if (!res.ok) throw new Error('Failed to get pending transactions');
-      const txs = await res.json();
-      if (txs.length === 0) {
+      const res = await fetch('/pending');
+      if (!res.ok) throw new Error('Failed to load pending transactions');
+      const data = await res.json(); // Expected array of transactions
+      if (!Array.isArray(data) || data.length === 0) {
         container.textContent = 'No pending transactions.';
         return;
       }
-      const blocksHtml = txs.map(tx => {
-        const dateStr = new Date(tx.timestamp * 1000).toLocaleString();
-        return `
-          <div class="pending-transaction-block">
-            <p><strong>From:</strong> ${tx.sender_code}</p>
-            <p><strong>To:</strong> ${tx.recipient_code}</p>
-            <p><strong>Amount:</strong> ${tx.amount.toFixed(2)} SIM</p>
-            <p><small><em>${dateStr}</em></small></p>
+      let html = '<ul class="tx-list">';
+      data.forEach(tx => {
+        html += `<li><b>From:</b> ${tx.sender_code || 'System'} <b>To:</b> ${tx.recipient_code} <b>Amount:</b> ${tx.amount ?? ''} SIM</li>`;
+      });
+      html += '</ul>';
+      container.innerHTML = html;
+    } catch (err) {
+      container.textContent = 'Error loading pending transactions.';
+    }
+  }
+
+  // --- Blockchain Explorer Visualization ---
+  async function loadBlockchainVisual() {
+    const container = document.getElementById('blockchain-visual');
+    if (!container) return;
+    container.textContent = "Loading blockchain...";
+    try {
+      const res = await fetch('/chain');
+      if (!res.ok) throw new Error('Failed to load chain');
+      const blockchain = await res.json();
+      if (!Array.isArray(blockchain) || blockchain.length === 0) {
+        container.textContent = "No blockchain data.";
+        return;
+      }
+      // Render chain horizontally with clickable blocks and arrows
+      let html = `<div class="blockchain-chain" role="list">`;
+      blockchain.forEach((block, idx) => {
+        html += `
+          <div class="block-box" role="listitem" tabindex="0" data-index="${block.index}" aria-label="Click to view details of block #${block.index}">
+            ${block.index === 0 ? "Genesis" : "Block"}<br>#${block.index}
           </div>
         `;
-      }).join('');
-      container.innerHTML = blocksHtml;
-    } catch {
-      container.textContent = 'Failed to load pending transactions.';
+        if (idx !== blockchain.length - 1) {
+          html += `<span class="chain-arrow" aria-hidden="true">&#8594;</span>`;
+        }
+      });
+      html += `</div>`;
+      container.innerHTML = html;
+
+      // Add keyboard accessibility: allow Enter/Space to open block details
+      container.querySelectorAll('.block-box').forEach(box => {
+        box.addEventListener('keydown', e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            showBlockDetail(parseInt(box.dataset.index));
+          }
+        });
+      });
+
+    } catch (err) {
+      container.textContent = "Failed to load blockchain.";
     }
   }
 
-  async function loadProfileHistory() {
-    const pendingDiv = document.getElementById('profilePendingTxs');
-    const confirmedDiv = document.getElementById('profileConfirmedTxs');
-    if (!pendingDiv || !confirmedDiv) return;
-    pendingDiv.textContent = 'Loading...';
-    confirmedDiv.textContent = 'Loading...';
+  // --- Show block details modal ---
+  window.showBlockDetail = async function (index) {
+    const modal = document.getElementById("blockDetailModal");
+    const content = document.getElementById('blockDetailContent');
+    content.innerHTML = "Loading...";
+    modal.style.display = 'flex';
     try {
-      const res = await fetch('/history');
-      if (!res.ok) throw new Error('Failed to load history');
-      const data = await res.json();
-
-      function renderTxList(txs) {
-        if (!txs || txs.length === 0) return '<p>None</p>';
-        return `<ul>${txs.map(tx => `<li>To <strong>${tx.recipient_code}</strong>: ${tx.amount.toFixed(2)} SIM</li>`).join('')}</ul>`;
+      const res = await fetch(`/block/${index}`);
+      if (!res.ok) {
+        content.textContent = "Block not found.";
+        return;
       }
-
-      pendingDiv.innerHTML = renderTxList(data.pending);
-      confirmedDiv.innerHTML = renderTxList(data.confirmed);
-    } catch {
-      pendingDiv.textContent = 'Failed to load pending transactions.';
-      confirmedDiv.textContent = 'Failed to load completed transactions.';
+      const block = await res.json();
+      // Display block details nicely formatted
+      let details = `
+        <h3>Block #${block.index}</h3>
+        <p><strong>Hash:</strong> <span class="hash-display">${block.hash}</span></p>
+        <p><strong>Previous Hash:</strong> <span class="hash-display">${block.previous_hash}</span></p>
+        <p><strong>Nonce:</strong> ${block.nonce}</p>
+        <p><strong>Miner:</strong> ${block.miner}</p>
+        <p><strong>Timestamp:</strong> ${new Date(block.timestamp * 1000).toLocaleString()}</p>
+        <p><strong>Mining Time:</strong> ${block.mining_time ? block.mining_time.toFixed(2) + 's' : 'N/A'}</p>
+        <h4>Transactions (${block.transactions.length}):</h4>
+        <ul>
+          ${block.transactions.map(tx =>
+        `<li>From ${tx.sender_code || 'System'} to ${tx.recipient_code} : ${tx.amount ?? ''} SIM</li>`
+      ).join('')}
+        </ul>
+      `;
+      content.innerHTML = details;
+    } catch (err) {
+      content.textContent = "Error loading block details.";
     }
-  }
+  };
 
-  // Search functionality in Search tab
-  const searchForm = document.getElementById('searchForm');
-  if (searchForm) {
-    searchForm.addEventListener('submit', async e => {
-      e.preventDefault();
-      const indexVal = document.getElementById('searchIndex').value.trim();
-      const hashVal = document.getElementById('searchHash').value.trim();
-      const resultsDiv = document.getElementById('searchResults');
-      resultsDiv.textContent = 'Searching...';
+  // Close block detail modal
+  window.closeBlockModal = function () {
+    document.getElementById("blockDetailModal").style.display = "none";
+  };
 
-      if (!indexVal && !hashVal) {
-        resultsDiv.textContent = 'Please enter search criteria.';
+  // Close modal if clicked outside content
+  document.addEventListener('click', e => {
+    if (e.target.classList.contains('modal')) e.target.style.display = 'none';
+  });
+
+  // --- Mining Modal Logic ---
+  window.mineBlock = async function () {
+    const modal = document.getElementById('miningModal');
+    const statusDiv = document.getElementById('miningStatus');
+    statusDiv.innerHTML = "<strong>Preparing mining challenge...</strong>";
+    modal.style.display = "flex";
+
+    try {
+      // Fetch mining challenge metadata for animation
+      const resp = await fetch('/mine_progress');
+      const meta = await resp.json();
+      if (meta.error) {
+        statusDiv.innerHTML = `<span style="color: #fa5;">${meta.error}</span>`;
         return;
       }
 
+      // Mining animation variables
+      let nonce = 0;
+      let hash = "";
+      let running = true;
+
+      // Animation loop - updates every ~90ms
+      const animate = () => {
+        if (!running) return;
+        nonce += Math.floor(Math.random() * 32) + 1;
+        hash = sha256(meta.index + meta.previous_hash + nonce + "simulate");
+        statusDiv.innerHTML = `
+          <div>
+            <p style="font-size:1.1em;"><b>Mining Block #${meta.index}...</b></p>
+            <p>Nonce: <b>${nonce}</b></p>
+            <p>Hash: <span class="hash-display">${hash}</span></p>
+            <p>Difficulty: <b>${meta.difficulty}</b> (leading zeros in hash)</p>
+            <div style="color:#b0f; margin-top:1em;">Mining... Please wait.</div>
+          </div>
+        `;
+        setTimeout(animate, 90);
+      };
+      animate();
+
+      // Actual mining request (blocks until mined)
+      const mined = await fetch('/mine', { method: "POST" });
+      running = false;
+      const result = await mined.json();
+
+      if (result.success) {
+        let seconds = result.mining_time.toFixed(2);
+        statusDiv.innerHTML = `
+          <div class="mining-result">
+            <h3>Block Successfully Mined!</h3>
+            <p>Block #: <b>${result.index}</b></p>
+            <p>Nonce: <b>${result.nonce}</b></p>
+            <p>Hash: <span class="hash-display">${result.hash}</span></p>
+            <p>Mining Time: <b>${seconds} s</b></p>
+            <button class="form-button" onclick="closeMiningModal(); location.reload();">Close</button>
+          </div>
+        `;
+      } else {
+        statusDiv.innerHTML = `<span style="color:#faa;">Mining failed.</span>`;
+      }
+    } catch (err) {
+      statusDiv.innerHTML = "<span style='color:#faa;'>Mining error.</span>";
+    }
+  };
+
+  // Close mining modal
+  window.closeMiningModal = function () {
+    document.getElementById('miningModal').style.display = 'none';
+  };
+
+  // Simple sha256 function for animated fake hashes (not cryptographic, for UI only)
+  function sha256(str) {
+    // Returns random 64 hex chars string for animation only
+    return Array(64).fill(0).map(() =>
+      "0123456789abcdef"[Math.floor(Math.random() * 16)]
+    ).join("");
+  }
+
+  // Attach mining button logic if present initially
+  document.querySelectorAll('.mine-btn').forEach(btn =>
+    btn.addEventListener('click', window.mineBlock)
+  );
+
+  // --- Search Tab functionality (optional) ---
+  const searchForm = document.getElementById('searchForm');
+  if (searchForm) {
+    searchForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const resultsDiv = document.getElementById('searchResults');
+      const type = document.getElementById('searchType').value;
+      const query = document.getElementById('searchInput').value.trim();
+      if (!query) {
+        resultsDiv.textContent = 'Please enter a search value.';
+        return;
+      }
+      resultsDiv.textContent = 'Searching...';
+
       try {
-        if (indexVal !== '') {
-          // Search block by index
-          const res = await fetch(`/block/${indexVal}`);
-          if (!res.ok) throw new Error('Block not found');
-          const block = await res.json();
-          resultsDiv.innerHTML = formatBlockDetails(block);
-          showModal('blockModal');
+        let endpoint = '';
+        if (type === 'block') {
+          // Search by block index
+          endpoint = `/block/${encodeURIComponent(query)}`;
+        } else if (type === 'hash') {
+          endpoint = `/search_hash/${encodeURIComponent(query)}`;
+        } else if (type === 'code') {
+          endpoint = `/search_code/${encodeURIComponent(query)}`;
         } else {
-          // Search transactions by hash or sender or recipient code via backend
-          const q = encodeURIComponent(hashVal);
-          const res = await fetch(`/search_transactions?q=${q}`);
-          if (!res.ok) throw new Error('Search failed');
-          const txs = await res.json();
-          if(txs.length === 0) {
-            resultsDiv.textContent = 'No transactions found.';
-          } else {
-            resultsDiv.innerHTML = txs.map(tx => 
-              `<div class="pending-transaction-block">
-                <p><strong>From:</strong> ${tx.sender_code}</p>
-                <p><strong>To:</strong> ${tx.recipient_code}</p>
-                <p><strong>Amount:</strong> ${tx.amount.toFixed(2)} SIM</p>
-              </div>`).join('');
-          }
+          resultsDiv.textContent = 'Invalid search type.';
+          return;
         }
+
+        const res = await fetch(endpoint);
+        if (!res.ok) {
+          resultsDiv.textContent = `No results found.`;
+          return;
+        }
+
+        const data = await res.json();
+        // Simple output formatting (can be improved)
+        resultsDiv.textContent = JSON.stringify(data, null, 2);
       } catch (err) {
-        resultsDiv.textContent = `Search error: ${err.message}`;
+        resultsDiv.textContent = 'Search error.';
       }
     });
   }
-
-  // Modal control and helpers
-  const blockModal = document.getElementById('blockModal');
-  const miningModal = document.getElementById('miningModal');
-  const blockDetails = document.getElementById('blockDetails');
-  const closeButtons = document.querySelectorAll('.close');
-
-  closeButtons.forEach(btn => btn.onclick = () => {
-    blockModal.style.display = 'none';
-    miningModal.style.display = 'none';
-  });
-
-  window.onclick = e => {
-    if (e.target === blockModal) blockModal.style.display = 'none';
-    if (e.target === miningModal) miningModal.style.display = 'none';
-  };
-
-  window.showBlockDetails = async function(index) {
-    blockDetails.textContent = 'Loading...';
-    blockModal.style.display = 'block';
-    try {
-      const res = await fetch(`/block/${index}`);
-      if (!res.ok) throw new Error('Block not found');
-      const block = await res.json();
-      blockDetails.innerHTML = formatBlockDetails(block);
-    } catch(e) {
-      blockDetails.textContent = `Error loading block: ${e.message}`;
-    }
-  }
-
-  function formatBlockDetails(block) {
-    let html = `
-      <p><strong>Index:</strong> ${block.index}</p>
-      <p><strong>Hash:</strong></p><div class="hash-display">${block.hash}</div>
-      <p><strong>Previous Hash:</strong></p><div class="hash-display">${block.previous_hash}</div>
-      <p><strong>Nonce:</strong> ${block.nonce}</p>
-      <p><strong>Timestamp:</strong> ${new Date(block.timestamp * 1000).toLocaleString()}</p>
-      <p><strong>Mining Time:</strong> ${block.mining_time ? block.mining_time.toFixed(2) + 's' : 'N/A'}</p>
-      <p><strong>Miner:</strong> ${block.miner || 'N/A'}</p>
-      <p><strong>Transactions (${block.transactions.length}):</strong></p>`;
-
-    if (block.transactions.length > 0) {
-      html += '<ul>';
-      block.transactions.forEach(tx => {
-        html += `<li>From <strong>${tx.sender_code}</strong> to <strong>${tx.recipient_code}</strong>: ${tx.amount.toFixed(2)} SIM</li>`;
-      });
-      html += '</ul>';
-    } else {
-      html += '<p>No transactions.</p>';
-    }
-    return html;
-  }
-
-  // Mining modal and simulation
-  let miningInterval = null;
-  let miningStartTime = null;
-
-  window.startMining = async function() {
-    const miningIndex = document.getElementById('miningIndex');
-    const currentHash = document.getElementById('currentHash');
-    const currentNonce = document.getElementById('currentNonce');
-    const timeElapsed = document.getElementById('timeElapsed');
-    const miningResult = document.getElementById('miningResult');
-    const finalNonce = document.getElementById('finalNonce');
-    const finalHash = document.getElementById('finalHash');
-    const miningTime = document.getElementById('miningTime');
-    const miningModal = document.getElementById('miningModal');
-
-    miningResult.style.display = 'none';
-    miningModal.style.display = 'block';
-
-    try {
-      // Get mining info
-      const progressRes = await fetch('/mine_progress');
-      const progressData = await progressRes.json();
-
-      if (progressData.error) {
-        alert(progressData.error);
-        miningModal.style.display = 'none';
-        return;
-      }
-
-      miningIndex.textContent = progressData.index;
-      currentNonce.textContent = 0;
-      timeElapsed.textContent = '0.00s';
-      currentHash.textContent = 'Searching...';
-      miningStartTime = Date.now();
-
-      miningInterval = setInterval(() => {
-        const elapsed = (Date.now() - miningStartTime) / 1000;
-        timeElapsed.textContent = elapsed.toFixed(2) + 's';
-        currentHash.textContent = generateRandomHash();
-        currentNonce.textContent = parseInt(currentNonce.textContent) + 1;
-      }, 100);
-
-      const mineRes = await fetch('/mine', { method: 'POST' });
-      clearInterval(miningInterval);
-
-      if (mineRes.ok) {
-        const mineData = await mineRes.json();
-        finalNonce.textContent = mineData.nonce;
-        finalHash.textContent = mineData.hash;
-        miningTime.textContent = mineData.mining_time.toFixed(2) + 's';
-        miningResult.style.display = 'block';
-      } else {
-        alert('Mining failed.');
-        miningModal.style.display = 'none';
-      }
-    } catch (e) {
-      alert('Mining error: ' + e.message);
-      miningModal.style.display = 'none';
-    }
-  };
-
-  function generateRandomHash() {
-    const chars = "0123456789abcdef";
-    let hash = "";
-    for (let i = 0; i < 64; i++) {
-      hash += chars[Math.floor(Math.random() * 16)];
-    }
-    return hash;
-  }
-
-  window.closeMiningModal = () => {
-    document.getElementById('miningModal').style.display = 'none';
-    window.location.reload();
-  };
-
 });

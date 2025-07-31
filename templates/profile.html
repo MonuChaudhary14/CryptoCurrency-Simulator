@@ -1,87 +1,363 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
-  <title>Profile - CryptoSim</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <title>CryptoSim - Profile</title>
+  <style>
+    /* Body and font */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #000;
+      color: #e0e7ff;
+      min-height: 100vh;
+    }
+
+    /* Navbar */
+    .navbar {
+      background-color: rgba(38, 50, 56, 0.95);
+      padding: 1rem 2rem;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+      user-select: none;
+      position: relative;
+    }
+
+    .navbar-title {
+      font-size: 1.8rem;
+      font-weight: bold;
+      user-select: none;
+    }
+
+    /* Dropdown container */
+    .user-dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    /* Dropdown button */
+    .dropbtn {
+      background-color: #3b82f6;
+      color: white;
+      border: none;
+      padding: 9px 18px;
+      cursor: pointer;
+      border-radius: 7px;
+      font-size: 1rem;
+      font-weight: 600;
+      user-select: none;
+      transition: background-color 0.3s;
+    }
+
+    .dropbtn:hover,
+    .dropbtn:focus {
+      background-color: #2563eb;
+      outline: 2px solid #2563eb;
+      outline-offset: 2px;
+    }
+
+    /* Dropdown content (menu) */
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: calc(100% + 7px);
+      background-color: #1f2937;
+      min-width: 160px;
+      border-radius: 10px;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.28);
+      z-index: 1000;
+      font-weight: 600;
+      font-size: 1rem;
+      user-select: none;
+      overflow: hidden;
+    }
+
+    /* Show dropdown */
+    .dropdown-content.show {
+      display: block;
+    }
+
+    /* Dropdown links/buttons */
+    .dropdown-content a,
+    .dropdown-content form button {
+      color: white !important;
+      background: none;
+      border: none;
+      padding: 12px 16px;
+      width: 100%;
+      text-align: left;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.27s;
+      text-decoration: none;
+      display: block;
+      user-select: none;
+    }
+
+    .dropdown-content a:hover,
+    .dropdown-content form button:hover {
+      background-color: #2563eb;
+    }
+
+    /* Profile wrapper */
+    .profile-wrapper {
+      max-width: 900px;
+      margin: 2rem auto 4rem;
+      padding: 20px;
+      background: rgba(38, 50, 56, 0.85);
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+      color: #e0e7ff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .profile-header {
+      display: flex;
+      align-items: center;
+      gap: 26px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .profile-avatar {
+      flex-shrink: 0;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      overflow: hidden;
+      background-color: #0f172a;
+      box-shadow: 0 0 30px #2563ebaa;
+    }
+
+    .profile-details {
+      flex: 1;
+      min-width: 260px;
+    }
+
+    .profile-details h2 {
+      margin: 0;
+      font-size: 2.4rem;
+      font-weight: 700;
+      color: #60a5fa;
+      text-transform: capitalize;
+    }
+
+    .profile-details p.email {
+      margin: 6px 0 12px;
+      color: #94a3b8;
+      font-size: 1.1rem;
+      font-weight: 500;
+      word-break: break-word;
+    }
+
+    .id-balance-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: #bfdbfe;
+      border-top: 1px solid #334155;
+      border-bottom: 1px solid #334155;
+      padding: 14px 6px;
+      margin-bottom: 14px;
+    }
+
+    .profile-stats {
+      display: flex;
+      gap: 24px;
+      font-size: 1.05rem;
+      color: #cbd5e1;
+      font-weight: 500;
+    }
+
+    /* Section Titles */
+    .section-title {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-top: 28px;
+      border-bottom: 2px solid #3b82f6;
+      padding-bottom: 8px;
+      max-width: max-content;
+      color: #93c5fd;
+      user-select: none;
+    }
+
+    /* Transaction lists with scrollable container */
+    .tx-list-container {
+      max-height: 380px;
+      overflow-y: auto;
+      margin-top: 12px;
+      background: rgba(15, 23, 42, 0.6);
+      border-radius: 14px;
+      padding: 16px 20px;
+      box-shadow: inset 0 0 15px #2563eb88;
+      border: 1px solid #3b82f6;
+    }
+
+    .tx-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-width: 320px;
+    }
+
+    .tx-list li {
+      display: flex;
+      justify-content: space-between;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 1rem;
+      padding: 8px 8px;
+      border-bottom: 1px solid #334155;
+      color: #e0e7ffcc;
+    }
+
+    .tx-list li:last-child {
+      border-bottom: none;
+    }
+
+    .tx-code {
+      word-break: break-word;
+      max-width: 65%;
+      color: #93c5fd;
+    }
+
+    .tx-amount {
+      text-align: right;
+      color: #22c55e;
+      font-weight: 600;
+      min-width: 90px;
+    }
+
+    .faint {
+      color: #718096cc;
+      font-style: italic;
+      font-size: 1rem;
+      margin: 10px 0;
+      user-select: none;
+    }
+  </style>
 </head>
-<body class="app-body">
-  <div class="navbar">
-    <div class="nav-container">
-      <div class="navbar-title">
-        <h1 class="navbar-heading">CryptoSim</h1>
+
+<body>
+
+  <nav class="navbar" role="navigation">
+    <div class="navbar-title">CryptoSim</div>
+    <div class="user-dropdown" id="userDropdown">
+      <button class="dropbtn" id="dropbtn" aria-haspopup="true" aria-expanded="false" aria-controls="dropdownMenu">{{
+        username }}</button>
+      <div class="dropdown-content" id="dropdownMenu" role="menu" aria-hidden="true">
+        <a href="{{ url_for('index') }}" role="menuitem">Dashboard</a>
+        <form action="{{ url_for('logout') }}" method="POST" role="menuitem" class="logout-form">
+          <button type="submit" class="logout-btn">Logout</button>
+        </form>
       </div>
-      <div class="auth-links">
-        <div class="user-dropdown" tabindex="0" aria-label="User menu">
-          <button class="dropbtn" aria-haspopup="true" aria-expanded="false">{{ username }}</button>
-          <div class="dropdown-content" role="menu" aria-hidden="true">
-            <a href="{{ url_for('index') }}" class="drop-down-profile" role="menuitem">Dashboard</a>
-            <form method="POST" action="{{ url_for('logout') }}" role="menuitem" class="logout-form">
-              <button type="submit" class="logout-btn">Logout</button>
-            </form>
-          </div>
+    </div>
+  </nav>
+
+  <main class="profile-wrapper" role="main">
+
+    <section class="profile-header">
+      <div class="profile-avatar">
+        <iframe src="https://lottie.host/embed/b719bf26-6d72-488d-969a-de0761720189/jpGLnXEg8z.json"
+          style="width: 120px; height: 120px; border:none; background:transparent;" allowfullscreen
+          title="User animated avatar"></iframe>
+      </div>
+      <div class="profile-details">
+        <h2>{{ username }}</h2>
+        <p class="email">{{ name }}</p>
+        <div class="id-balance-row">
+          <span><strong>Unique ID:</strong> <span class="code">{{ unique_code }}</span></span>
+          <span style="color:#22c55e;"><strong>Balance:</strong> {{ balance | round(2) }} SIM</span>
+        </div>
+        <div class="profile-stats">
+          <div><strong>Available:</strong> {{ available_balance | round(2) }} SIM</div>
+          <div><strong>Joined:</strong> {{ join_date }}</div>
+          <div><strong>Pending Tx:</strong> {{ pending_txs|length }}</div>
+          <div><strong>Completed Tx:</strong> {{ confirmed_txs|length }}</div>
+          <div><strong>Total Tx:</strong> {{ total_transactions }}</div>
         </div>
       </div>
-    </div>
-  </div>
+    </section>
 
-  <main class="app-main">
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}
-        {% for msg in messages %}
-          <div class="flash-message">{{ msg }}</div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-
-    <h2 class="section-heading">Your Profile</h2>
-    <ul class="profile-details">
-      <li><strong>Username:</strong> {{ username }}</li>
-      <li><strong>Name (Email):</strong> {{ name }}</li>
-      <li><strong>Unique ID:</strong> {{ unique_code }}</li>
-      <li><strong>Balance:</strong> {{ balance | round(2) }}</li>
-      <li><strong>Available Balance:</strong> {{ available_balance | round(2) }}</li>
-      <li><strong>Member Since:</strong> {{ join_date }}</li>
-    </ul>
-
-    <h3 class="section-heading">Transaction History</h3>
-
-    <h4>Pending Transactions</h4>
-    <div id="profilePendingTxs" class="transaction-list">
-      {% if pending_txs %}
-        <ul>
+    <section>
+      <h3 class="section-title">Pending Transactions</h3>
+      <div class="tx-list-container">
+        {% if pending_txs %}
+        <ul class="tx-list">
           {% for tx in pending_txs %}
-            <li>To <strong>{{ tx.recipient_code }}</strong>: {{ "%.2f"|format(tx.amount) }} SIM</li>
+          <li><span class="tx-code">{{ tx.recipient_code }}</span><span class="tx-amount">{{ "%.2f"|format(tx.amount) }}
+              SIM</span></li>
           {% endfor %}
         </ul>
-      {% else %}
-        <p>No pending transactions.</p>
-      {% endif %}
-    </div>
+        {% else %}
+        <span class="faint">No pending transactions.</span>
+        {% endif %}
+      </div>
+    </section>
 
-    <h4>Completed Transactions</h4>
-    <div id="profileConfirmedTxs" class="transaction-list">
-      {% if confirmed_txs %}
-        <ul>
+    <section>
+      <h3 class="section-title">Confirmed Transactions</h3>
+      <div class="tx-list-container">
+        {% if confirmed_txs %}
+        <ul class="tx-list">
           {% for tx in confirmed_txs %}
-            <li>To <strong>{{ tx.recipient_code }}</strong>: {{ "%.2f"|format(tx.amount) }} SIM</li>
+          <li><span class="tx-code">{{ tx.recipient_code }}</span><span class="tx-amount">{{ "%.2f"|format(tx.amount) }}
+              SIM</span></li>
           {% endfor %}
         </ul>
-      {% else %}
-        <p>No completed transactions.</p>
-      {% endif %}
-    </div>
-
-    <h3 class="section-heading">Account Actions</h3>
-    <button class="profile-action" disabled>Change Password (coming soon)</button>
-    <button class="profile-action" disabled>Change Transaction Password (coming soon)</button>
-    <button class="profile-action" disabled>Export Keys (coming soon)</button>
-    <button class="profile-action" disabled>Delete Account (coming soon)</button>
+        {% else %}
+        <span class="faint">No completed transactions.</span>
+        {% endif %}
+      </div>
+    </section>
 
   </main>
 
-  <footer class="footer">
-    &copy; 2025 CryptoSim. All rights reserved.
-  </footer>
+  <script>
+    // Dropdown toggle logic
+    document.addEventListener("DOMContentLoaded", () => {
+      const dropdown = document.getElementById('dropdownMenu');
+      const dropbtn = document.getElementById('dropbtn');
+
+      if (dropbtn && dropdown) {
+        dropbtn.addEventListener('click', e => {
+          e.stopPropagation();
+          const expanded = dropbtn.getAttribute('aria-expanded') === 'true';
+          dropbtn.setAttribute('aria-expanded', !expanded);
+          const isHidden = dropdown.getAttribute('aria-hidden') === 'true';
+          dropdown.setAttribute('aria-hidden', !isHidden);
+          dropdown.classList.toggle('show');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', () => {
+          if (dropdown.classList.contains('show')) {
+            dropdown.classList.remove('show');
+            dropbtn.setAttribute('aria-expanded', false);
+            dropdown.setAttribute('aria-hidden', true);
+          }
+        });
+
+        // Close dropdown with Escape key
+        document.addEventListener('keydown', e => {
+          if (e.key === "Escape" && dropdown.classList.contains('show')) {
+            dropdown.classList.remove('show');
+            dropbtn.setAttribute('aria-expanded', false);
+            dropdown.setAttribute('aria-hidden', true);
+            dropbtn.focus();
+          }
+        });
+      }
+    });
+  </script>
+
 </body>
+
 </html>

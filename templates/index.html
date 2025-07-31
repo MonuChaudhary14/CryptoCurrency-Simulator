@@ -1,225 +1,132 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>CryptoSim</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
-  <script src="{{ url_for('static', filename='script.js') }}" defer></script>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <!-- Style (assuming static/style.css exists) -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body class="app-body">
 
-<nav class="navbar">
-  <div class="nav-container">
-    <div class="navbar-title"><h1 class="navbar-heading">CryptoSim</h1></div>
-    <div class="auth-links">
-      {% if username %}
-      <div class="user-dropdown">
-        <button class="dropbtn">{{ username }}</button>
-        <div class="dropdown-content">
-          <a href="{{ url_for('profile') }}" class="drop-down-profile">Profile</a>
-          <form action="{{ url_for('logout') }}" method="POST" class="logout-form">
-            <button type="submit" class="logout-btn">Logout</button>
-          </form>
+<body>
+  <!-- Navbar -->
+  <div class="navbar">
+    <div class="nav-container">
+      <div class="navbar-title">
+        <span class="navbar-heading">CryptoSim</span>
+      </div>
+      <div class="auth-links">
+        {% if username %}
+        <div class="user-dropdown">
+          <button class="dropbtn" aria-expanded="false">{{ username }}</button>
+          <div class="dropdown-content" aria-hidden="true">
+            <a href="/profile" class="drop-down-profile">Profile</a>
+            <form action="/logout" method="post"><button type="submit">Logout</button></form>
+          </div>
         </div>
+        {% else %}
+        <a class="login-dashboard" href="/login">Login</a>
+        <a class="signup-dashboard" href="/signup">Signup</a>
+        {% endif %}
       </div>
-      {% else %}
-      <div class="login-dashboard"><a href="{{ url_for('login') }}" class="login-link">Login</a></div>
-      <div class="signup-dashboard"><a href="{{ url_for('signup') }}" class="signup-link">Signup</a></div>
-      {% endif %}
     </div>
+    <ul class="nav-tabs">
+      <li class="tab-link active" data-tab="dashboard">Dashboard</li>
+      <li class="tab-link" data-tab="balances">Balances</li>
+      <li class="tab-link" data-tab="search">Search</li>
+      <li class="tab-link" data-tab="transactions">Transactions</li>
+      <li class="tab-link" data-tab="pending">Pending Transactions</li>
+      <li class="tab-link" data-tab="mine">Mine</li>
+    </ul>
   </div>
 
-  <ul class="nav-tabs">
-    <li class="tab-link active" data-tab="dashboard">Dashboard</li>
-    <li class="tab-link" data-tab="balances">Balances</li>
-    <li class="tab-link" data-tab="search">Search</li>
-    <li class="tab-link" data-tab="transactions">Transactions</li>
-    <li class="tab-link" data-tab="pending">Pending Transactions</li>
-    <li class="tab-link" data-tab="mine">Mine</li>
-  </ul>
-</nav>
-
-<div class="tab-content">
-
-  <div class="tab-pane active" id="dashboard">
-    {% with messages = get_flashed_messages() %}
+  <div class="tab-content">
+    <!-- Dashboard Tab -->
+    <div class="tab-pane active" id="dashboard">
+      {% with messages = get_flashed_messages() %}
       {% if messages %}
-        {% for msg in messages %}
-          <div class="flash-message">{{ msg }}</div>
-        {% endfor %}
+      {% for msg in messages %}
+      <div class="flash-message">{{ msg }}</div>
+      {% endfor %}
       {% endif %}
-    {% endwith %}
-    {% if username %}
-    <h3 class="form-title">Send SIM</h3>
-    <form action="{{ url_for('send') }}" method="POST" class="send-form">
-      <input type="text" name="recipient_code" placeholder="Recipient's Unique Code" required class="form-input" />
-      <input type="number" name="amount" placeholder="Amount to send" min="0.01" step="0.01" required class="form-input" />
-      <input type="password" name="tx_password" placeholder="Transaction Password" required class="form-input" />
-      <button type="submit" class="form-button">Send</button>
-    </form>
-    {% else %}
-    <p class="login-prompt">Please <a href="{{ url_for('login') }}" class="link">login</a> or <a href="{{ url_for('signup') }}" class="link">signup</a> to use the platform.</p>
-    {% endif %}
-  </div>
-
-  <div class="tab-pane" id="balances">
-    <h3 class="section-title">Balances</h3>
-    <div id="balanceList" class="balances-list">Loading balances...</div>
-  </div>
-
-  <div class="tab-pane" id="search">
-    <h3 class="section-title">Search Blockchain / Transactions</h3>
-    <form id="searchForm" class="search-form">
-      <label for="searchIndex">Block Index:</label>
-      <input type="number" id="searchIndex" class="form-input" min="0" placeholder="Search by block index" />
-      <label for="searchHash">Transaction or Block Hash / Sender / Recipient:</label>
-      <input type="text" id="searchHash" class="form-input" placeholder="Search by hash or code" />
-      <button type="submit" class="form-button">Search</button>
-    </form>
-    <div id="searchResults" class="search-results"></div>
-  </div>
-
-  <div class="tab-pane" id="transactions">
-    <h3 class="section-title">Blockchain Explorer</h3>
-    <div id="blockchainContainer" class="blockchain-container">Loading blockchain...</div>
-  </div>
-
-  <div class="tab-pane" id="pending">
-    <h3 class="section-title">Pending Transactions</h3>
-    <div id="pendingTransactionsContainer" class="pending-transactions-container">Loading pending transactions...</div>
-  </div>
-
-  <div class="tab-pane" id="mine">
-    <h3 class="section-title">Mine Block</h3>
-    {% if username %}
-    <form class="mine-form">
-      <button type="button" class="form-button mine-button" onclick="startMining()">Mine Block (Earn 10 SIM)</button>
-    </form>
-    {% else %}
-    <p class="login-prompt">Please <a href="{{ url_for('login') }}" class="link">login</a> to mine blocks.</p>
-    {% endif %}
-  </div>
-
-</div>
-
-<!-- Block Details Modal -->
-<div id="blockModal" class="modal" role="dialog" aria-labelledby="modalTitle">
-  <div class="modal-content">
-    <span class="close" role="button">&times;</span>
-    <h2 class="modal-title" id="modalTitle">Block Details</h2>
-    <div id="blockDetails" class="block-details"></div>
-  </div>
-</div>
-
-<!-- Mining Progress Modal -->
-<div id="miningModal" class="modal" role="dialog" aria-labelledby="miningModalTitle">
-  <div class="modal-content mining-modal">
-    <h2 class="modal-title" id="miningModalTitle">Mining in Progress...</h2>
-    <div class="mining-progress">
-      <div class="mining-info">
-        <p><strong>Block Index:</strong> <span id="miningIndex">-</span></p>
-        <p><strong>Current Hash:</strong> <span id="currentHash" class="hash-display">Searching...</span></p>
-        <p><strong>Nonce:</strong> <span id="currentNonce">0</span></p>
-        <p><strong>Time Elapsed:</strong> <span id="timeElapsed">0.00s</span></p>
-      </div>
-      <div class="mining-spinner"></div>
-      <div id="miningResult" class="mining-result" style="display:none;">
-        <h3>Block Mined Successfully!</h3>
-        <p><strong>Final Nonce:</strong> <span id="finalNonce">-</span></p>
-        <p><strong>Final Hash:</strong> <span id="finalHash" class="hash-display">-</span></p>
-        <p><strong>Mining Time:</strong> <span id="miningTime">-</span></p>
-        <button type="button" class="form-button" onclick="closeMiningModal()">Done</button>
-      </div>
+      {% endwith %}
+      {% if username %}
+      <form class="send-form" method="POST" action="/send">
+        <h2 class="form-title">Send SIM</h2>
+        <label>Enter Recipient's Unique Code: <input class="form-input" name="recipient_code"
+            placeholder="Recipient Code"></label>
+        <label>Enter the Amount to Send: <input class="form-input" name="amount" type="number"
+            placeholder="Amount (e.g. 10.00)" min="0.01" step="0.01"></label>
+        <label>Transaction Password: <input class="form-input" name="tx_password" type="password"
+            placeholder="Transaction Password"></label>
+        <button type="submit" class="form-button">Send</button>
+      </form>
+      {% else %}
+      <div class="faint" style="text-align:center;margin:2em 0 0">Please <a href="/login">login</a> or <a
+          href="/signup">signup</a> to use the platform.</div>
+      {% endif %}
+    </div>
+    <!-- Balances Tab -->
+    <div class="tab-pane" id="balances">
+      <h2>Balances</h2>
+      <div id="balanceList">Loading balances...</div>
+    </div>
+    <!-- Search Tab -->
+    <div class="tab-pane" id="search">
+      <h2>Search Blockchain / Transactions</h2>
+      <form id="searchForm" class="search-form" autocomplete="off">
+        <label>Search By:</label>
+        <select id="searchType" name="searchType">
+          <option value="block">Block Index</option>
+          <option value="hash">Hash Code</option>
+          <option value="code">Unique Code</option>
+        </select>
+        <label>Enter Search Value:</label>
+        <input type="text" id="searchInput" name="q" placeholder="e.g. Block index, hash, your code..."
+          autocomplete="off">
+        <button type="submit" class="form-button">Search</button>
+      </form>
+      <div id="searchResults"></div>
+    </div>
+    <!-- Transaction Explorer Tab (Interactive Blockchain) -->
+    <div class="tab-pane" id="transactions">
+      <h2>Blockchain Explorer</h2>
+      <div id="blockchain-visual" style="margin-bottom:1.5em;">Loading blockchain...</div>
+    </div>
+    <!-- Pending Transactions -->
+    <div class="tab-pane" id="pending">
+      <h2>Pending Transactions</h2>
+      <div id="pendingTxList">Loading pending transactions...</div>
+    </div>
+    <!-- Mining Tab -->
+    <div class="tab-pane" id="mine">
+      <h2>Mine Block</h2>
+      {% if username %}
+      <button class="mine-btn form-button" type="button">Mine Block (Earn 10 SIM)</button>
+      {% else %}
+      <div class="faint" style="margin:1.5em 0 0 0">Please <a href="/login">login</a> to mine blocks.</div>
+      {% endif %}
     </div>
   </div>
-</div>
 
-<footer class="footer">
-  &copy; 2025 CryptoSim. All rights reserved.
-</footer>
-
-<script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const tabs = document.querySelectorAll('.tab-link');
-    const panes = document.querySelectorAll('.tab-pane');
-
-    tabs.forEach(tab => {
-      tab.addEventListener('click', () => {
-        tabs.forEach(t => t.classList.remove('active'));
-        panes.forEach(p => p.classList.remove('active'));
-        tab.classList.add('active');
-        document.getElementById(tab.dataset.tab).classList.add('active');
-
-        if (tab.dataset.tab === "balances") {
-          fetch('/balances').then(res => res.json()).then(data => {
-            let html = '<ul>';
-            for (const [code, balance] of Object.entries(data)) {
-              html += `<li><strong>${code}</strong>: ${balance.toFixed(2)} SIM</li>`;
-            }
-            html += '</ul>';
-            document.getElementById('balanceList').innerHTML = html;
-          }).catch(() => {
-            document.getElementById('balanceList').innerText = 'Failed to load balances.';
-          });
-        }
-
-        if (tab.dataset.tab === "explorer") {
-          fetch('/chain').then(res => res.json()).then(chain => {
-            if (chain.length === 0) {
-              document.getElementById('latestBlock').innerText = 'No blocks mined yet.';
-              return;
-            }
-            const block = chain[chain.length - 1];
-            let html = `<p><strong>Block #${block.index}</strong></p>`;
-            html += `<p>Hash: ${block.hash}</p>`;
-            html += `<p>Previous Hash: ${block.previous_hash}</p>`;
-            html += `<p>Nonce: ${block.nonce}</p>`;
-            html += '<p>Transactions:</p><ul>';
-            for (const tx of block.transactions) {
-              html += `<li>From <strong>${tx.sender_code}</strong> to <strong>${tx.recipient_code}</strong>: ${tx.amount.toFixed(2)} SIM</li>`;
-            }
-            html += '</ul>';
-            document.getElementById('latestBlock').innerHTML = html;
-          }).catch(() => {
-            document.getElementById('latestBlock').innerText = 'Failed to load block data.';
-          });
-        }
-
-        if (tab.dataset.tab === "transactions") {
-          fetch('/pending_transactions').then(res => res.json()).then(txns => {
-            if (txns.length === 0) {
-              document.getElementById('transactionList').innerText = 'No pending transactions.';
-              return;
-            }
-            let html = '<ul>';
-            for (const tx of txns) {
-              html += `<li>From <strong>${tx.sender_code}</strong> to <strong>${tx.recipient_code}</strong>: ${tx.amount.toFixed(2)} SIM</li>`;
-            }
-            html += '</ul>';
-            document.getElementById('transactionList').innerHTML = html;
-          }).catch(() => {
-            document.getElementById('transactionList').innerText = 'Failed to load transactions.';
-          });
-        }
-      });
-    });
-
-    // Initialize by clicking the first active tab
-    document.querySelector('.tab-link.active').click();
-  });
-
-  document.addEventListener('DOMContentLoaded', () => {
-    const flash = document.querySelector('.flash');
-    if (flash) {
-      setTimeout(() => {
-        flash.classList.add('fade-out');
-        setTimeout(() => {
-          flash.remove();
-        }, 500);
-      }, 3000);
-    }
-  });
-</script>
-
+  <!-- MODALS: Block Details & Mining -->
+  <!-- Block Details Modal -->
+  <div id="blockDetailModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeBlockModal()">&times;</span>
+      <div id="blockDetailContent"></div>
+    </div>
+  </div>
+  <!-- Mining Modal -->
+  <div id="miningModal" class="modal">
+    <div class="modal-content mining-modal">
+      <span class="close" onclick="closeMiningModal()">&times;</span>
+      <div id="miningStatus"></div>
+    </div>
+  </div>
+  <!-- Scripts -->
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
+
 </html>

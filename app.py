@@ -6,10 +6,7 @@ import time
 from pymongo import MongoClient
 
 app = Flask(__name__)
-app.secret_key = 'signing_session_key'  
-
-
-
+app.secret_key = 'your-secret-key'  # Change this to a strong secret key
 
 # --- Database Setup ---
 client = MongoClient("mongodb://localhost:27017")
@@ -18,21 +15,24 @@ users = db['users']
 blockchain = db['blockchain']
 pending_transactions = db['pending_transactions']
 
-DIFFICULTY = 5  
+DIFFICULTY = 4  # Mining difficulty: how many leading zeroes required in block hash
 
-
-
+# --- Helper Functions ---
 
 def hash_password(password):
+    """Hash a password with SHA-256."""
     return hashlib.sha256(password.encode()).hexdigest()
 
 def get_user_by_username(username):
+    """Retrieve user document by username."""
     return users.find_one({"username": username})
 
 def get_user_by_code(code):
+    """Retrieve user document by unique code."""
     return users.find_one({"unique_code": code})
 
 def get_last_block():
+    """Get the latest block in the blockchain; create genesis block if empty."""
     block = blockchain.find_one(sort=[("index", -1)])
     if block:
         return block
@@ -51,6 +51,7 @@ def get_last_block():
         return genesis
 
 def proof_of_work(index, previous_hash, transactions):
+    """Performs proof-of-work algorithm."""
     nonce = 0
     start_time = time.time()
     tx_string = json.dumps(transactions, sort_keys=True)
@@ -63,6 +64,7 @@ def proof_of_work(index, previous_hash, transactions):
         nonce += 1
 
 def get_user_balance(user_code):
+    """Get user's balance, accounting for pending outgoing transactions."""
     user = get_user_by_code(user_code)
     if not user:
         return 0
@@ -71,6 +73,7 @@ def get_user_balance(user_code):
     )
     return user.get('balance', 0) - pending_amount
 
+# --- Simple login_required decorator ---
 
 def login_required(func):
     def wrapper(*args, **kwargs):
@@ -78,9 +81,10 @@ def login_required(func):
             flash("Please login first.")
             return redirect(url_for('login'))
         return func(*args, **kwargs)
-    wrapper.__name__ = func.__name__  
+    wrapper.__name__ = func.__name__  # preserve original function name for Flask
     return wrapper
 
+# --- Flask Routes ---
 
 @app.route('/')
 def index():
@@ -123,8 +127,7 @@ def signup():
         users.insert_one(user_doc)
         flash(f"Account created! Your unique code is: {unique_code}")
         return redirect(url_for('login'))
-    else:
-        return render_template('signup.html')
+    return render_template('signup.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -185,7 +188,7 @@ def send():
         flash("Insufficient funds considering pending transactions.")
         return redirect(url_for('index'))
 
-    
+    # Insert new pending transaction
     pending_transactions.insert_one({
         'sender_code': sender['unique_code'],
         'recipient_code': recipient_code,
@@ -251,6 +254,7 @@ def mine():
 
     nonce, hash_result, mining_time = proof_of_work(new_index, last_block['hash'], tx_list)
 
+    # Update balances and transaction status
     for tx in valid_txs:
         users.update_one({'unique_code': tx['sender_code']}, {'$inc': {'balance': -tx['amount']}})
         users.update_one({'unique_code': tx['recipient_code']}, {'$inc': {'balance': tx['amount']}})
@@ -331,6 +335,7 @@ def pending_transactions_api():
     txs = list(pending_transactions.find({'status': 'pending'}, {"_id": 0}))
     return jsonify(txs)
 
+
 @app.route('/block/<int:block_index>')
 @login_required
 def get_block_details(block_index):
@@ -338,6 +343,7 @@ def get_block_details(block_index):
     if block:
         return jsonify(block)
     return jsonify({'error': 'Block not found'}), 404
+
 
 @app.route('/history')
 @login_required
