@@ -4,22 +4,20 @@
   <meta charset="UTF-8" />
   <title>CryptoSim</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
-  <script src="{{ url_for('static', filename='script.js') }}"></script>
+  <script src="{{ url_for('static', filename='script.js') }}" defer></script>
 </head>
 <body class="app-body">
 
 <nav class="navbar">
   <div class="nav-container">
-    <div class="navbar-title">
-      <h1 class="navbar-heading">CryptoSim</h1>
-    </div>
+    <div class="navbar-title"><h1 class="navbar-heading">CryptoSim</h1></div>
     <div class="auth-links">
       {% if username %}
-      <div class="user-dropdown" tabindex="0" aria-label="User menu">
-        <button class="dropbtn" aria-haspopup="true" aria-expanded="false">{{ username }}</button>
-        <div class="dropdown-content" role="menu" aria-hidden="true">
-          <a href="{{ url_for('profile') }}" class="drop-down-profile" role="menuitem">Profile</a>
-          <form action="{{ url_for('logout') }}" method="POST" role="menuitem" class="logout-form">
+      <div class="user-dropdown">
+        <button class="dropbtn">{{ username }}</button>
+        <div class="dropdown-content">
+          <a href="{{ url_for('profile') }}" class="drop-down-profile">Profile</a>
+          <form action="{{ url_for('logout') }}" method="POST" class="logout-form">
             <button type="submit" class="logout-btn">Logout</button>
           </form>
         </div>
@@ -30,11 +28,13 @@
       {% endif %}
     </div>
   </div>
+
   <ul class="nav-tabs">
     <li class="tab-link active" data-tab="dashboard">Dashboard</li>
     <li class="tab-link" data-tab="balances">Balances</li>
-    <li class="tab-link" data-tab="explorer">Explorer</li>
+    <li class="tab-link" data-tab="search">Search</li>
     <li class="tab-link" data-tab="transactions">Transactions</li>
+    <li class="tab-link" data-tab="pending">Pending Transactions</li>
     <li class="tab-link" data-tab="mine">Mine</li>
   </ul>
 </nav>
@@ -45,7 +45,7 @@
     {% with messages = get_flashed_messages() %}
       {% if messages %}
         {% for msg in messages %}
-        <div class="flash-message">{{ msg }}</div>
+          <div class="flash-message">{{ msg }}</div>
         {% endfor %}
       {% endif %}
     {% endwith %}
@@ -64,36 +64,74 @@
 
   <div class="tab-pane" id="balances">
     <h3 class="section-title">Balances</h3>
-    <div id="balanceList" class="balances-list">
-      Loading balances...
-    </div>
+    <div id="balanceList" class="balances-list">Loading balances...</div>
   </div>
 
-  <div class="tab-pane" id="explorer">
-    <h3 class="section-title">Latest Block</h3>
-    <div id="latestBlock" class="latest-block">
-      Loading latest block...
-    </div>
+  <div class="tab-pane" id="search">
+    <h3 class="section-title">Search Blockchain / Transactions</h3>
+    <form id="searchForm" class="search-form">
+      <label for="searchIndex">Block Index:</label>
+      <input type="number" id="searchIndex" class="form-input" min="0" placeholder="Search by block index" />
+      <label for="searchHash">Transaction or Block Hash / Sender / Recipient:</label>
+      <input type="text" id="searchHash" class="form-input" placeholder="Search by hash or code" />
+      <button type="submit" class="form-button">Search</button>
+    </form>
+    <div id="searchResults" class="search-results"></div>
   </div>
 
   <div class="tab-pane" id="transactions">
+    <h3 class="section-title">Blockchain Explorer</h3>
+    <div id="blockchainContainer" class="blockchain-container">Loading blockchain...</div>
+  </div>
+
+  <div class="tab-pane" id="pending">
     <h3 class="section-title">Pending Transactions</h3>
-    <div id="transactionList" class="transaction-list">
-      Loading pending transactions...
-    </div>
+    <div id="pendingTransactionsContainer" class="pending-transactions-container">Loading pending transactions...</div>
   </div>
 
   <div class="tab-pane" id="mine">
     <h3 class="section-title">Mine Block</h3>
     {% if username %}
-    <form action="{{ url_for('mine') }}" method="POST" class="mine-form">
-      <button type="submit" class="form-button mine-button">Mine Block (Earn 10 SIM)</button>
+    <form class="mine-form">
+      <button type="button" class="form-button mine-button" onclick="startMining()">Mine Block (Earn 10 SIM)</button>
     </form>
     {% else %}
     <p class="login-prompt">Please <a href="{{ url_for('login') }}" class="link">login</a> to mine blocks.</p>
     {% endif %}
   </div>
 
+</div>
+
+<!-- Block Details Modal -->
+<div id="blockModal" class="modal" role="dialog" aria-labelledby="modalTitle">
+  <div class="modal-content">
+    <span class="close" role="button">&times;</span>
+    <h2 class="modal-title" id="modalTitle">Block Details</h2>
+    <div id="blockDetails" class="block-details"></div>
+  </div>
+</div>
+
+<!-- Mining Progress Modal -->
+<div id="miningModal" class="modal" role="dialog" aria-labelledby="miningModalTitle">
+  <div class="modal-content mining-modal">
+    <h2 class="modal-title" id="miningModalTitle">Mining in Progress...</h2>
+    <div class="mining-progress">
+      <div class="mining-info">
+        <p><strong>Block Index:</strong> <span id="miningIndex">-</span></p>
+        <p><strong>Current Hash:</strong> <span id="currentHash" class="hash-display">Searching...</span></p>
+        <p><strong>Nonce:</strong> <span id="currentNonce">0</span></p>
+        <p><strong>Time Elapsed:</strong> <span id="timeElapsed">0.00s</span></p>
+      </div>
+      <div class="mining-spinner"></div>
+      <div id="miningResult" class="mining-result" style="display:none;">
+        <h3>Block Mined Successfully!</h3>
+        <p><strong>Final Nonce:</strong> <span id="finalNonce">-</span></p>
+        <p><strong>Final Hash:</strong> <span id="finalHash" class="hash-display">-</span></p>
+        <p><strong>Mining Time:</strong> <span id="miningTime">-</span></p>
+        <button type="button" class="form-button" onclick="closeMiningModal()">Done</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <footer class="footer">

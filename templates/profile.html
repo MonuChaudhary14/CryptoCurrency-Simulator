@@ -4,60 +4,19 @@
   <meta charset="UTF-8" />
   <title>Profile - CryptoSim</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
-  <style>
-    /* Profile page main container */
-    body{
-        background: linear-gradient(to right, #1f1c2c, #928dab);
-        margin: 0 0;
-        padding: 0;
-        box-sizing: border-box;
-    }
-    main {
-      max-width: 600px;
-      margin: 40px auto;
-      padding: 20px 28px;
-      background: linear-gradient(to right, #1f1c2c, #928dab);
-      border-radius: 12px;
-      color: #eee;
-      box-sizing: border-box;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-    main h2 {
-      margin-top: 0;
-      margin-bottom: 20px;
-      font-weight: 700;
-      font-size: 2rem;
-      letter-spacing: 0.04em;
-    }
-    ul.profile-details {
-      list-style: none;
-      padding: 0;
-      font-size: 1.1rem;
-      line-height: 1.7;
-    }
-    ul.profile-details li {
-      margin-bottom: 14px;
-      font-size: 1.1rem;
-    }
-    /* Responsive adjustments */
-    @media (max-width: 700px) {
-      main {
-        margin: 20px 2vw;
-        padding: 12px 8vw;
-      }
-    }
-  </style>
 </head>
-<body>
+<body class="app-body">
   <div class="navbar">
     <div class="nav-container">
-      <div class="navbar-title"><h1>CryptoSim</h1></div>
+      <div class="navbar-title">
+        <h1 class="navbar-heading">CryptoSim</h1>
+      </div>
       <div class="auth-links">
-        <div class="user-dropdown" tabindex="0" aria-label="User profile options">
-          <button class="dropbtn" aria-haspopup="true" aria-expanded="false">{{ username }} ▾</button>
+        <div class="user-dropdown" tabindex="0" aria-label="User menu">
+          <button class="dropbtn" aria-haspopup="true" aria-expanded="false">{{ username }}</button>
           <div class="dropdown-content" role="menu" aria-hidden="true">
-            <a href="{{ url_for('profile') }}" role="menuitem" tabindex="-1" class="drop-down-profile">Profile</a>
-            <form method="POST" action="{{ url_for('logout') }}" role="menuitem" tabindex="-1">
+            <a href="{{ url_for('index') }}" class="drop-down-profile" role="menuitem">Dashboard</a>
+            <form method="POST" action="{{ url_for('logout') }}" role="menuitem" class="logout-form">
               <button type="submit" class="logout-btn">Logout</button>
             </form>
           </div>
@@ -66,13 +25,63 @@
     </div>
   </div>
 
-  <main>
-    <h2>Your Profile</h2>
+  <main class="app-main">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for msg in messages %}
+          <div class="flash-message">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <h2 class="section-heading">Your Profile</h2>
     <ul class="profile-details">
       <li><strong>Username:</strong> {{ username }}</li>
-      <li><strong>Name:</strong> {{ name }}</li>
+      <li><strong>Name (Email):</strong> {{ name }}</li>
       <li><strong>Unique ID:</strong> {{ unique_code }}</li>
+      <li><strong>Balance:</strong> {{ balance | round(2) }}</li>
+      <li><strong>Available Balance:</strong> {{ available_balance | round(2) }}</li>
+      <li><strong>Member Since:</strong> {{ join_date }}</li>
     </ul>
+
+    <h3 class="section-heading">Transaction History</h3>
+
+    <h4>Pending Transactions</h4>
+    <div id="profilePendingTxs" class="transaction-list">
+      {% if pending_txs %}
+        <ul>
+          {% for tx in pending_txs %}
+            <li>To <strong>{{ tx.recipient_code }}</strong>: {{ "%.2f"|format(tx.amount) }} SIM</li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>No pending transactions.</p>
+      {% endif %}
+    </div>
+
+    <h4>Completed Transactions</h4>
+    <div id="profileConfirmedTxs" class="transaction-list">
+      {% if confirmed_txs %}
+        <ul>
+          {% for tx in confirmed_txs %}
+            <li>To <strong>{{ tx.recipient_code }}</strong>: {{ "%.2f"|format(tx.amount) }} SIM</li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>No completed transactions.</p>
+      {% endif %}
+    </div>
+
+    <h3 class="section-heading">Account Actions</h3>
+    <button class="profile-action" disabled>Change Password (coming soon)</button>
+    <button class="profile-action" disabled>Change Transaction Password (coming soon)</button>
+    <button class="profile-action" disabled>Export Keys (coming soon)</button>
+    <button class="profile-action" disabled>Delete Account (coming soon)</button>
+
   </main>
+
+  <footer class="footer">
+    &copy; 2025 CryptoSim. All rights reserved.
+  </footer>
 </body>
 </html>
