@@ -1,132 +1,140 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8">
-  <title>CryptoSim</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <!-- Style (assuming static/style.css exists) -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <meta charset="UTF-8" />
+    <title>CryptoSim</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
 </head>
-
 <body>
-  <!-- Navbar -->
-  <div class="navbar">
-    <div class="nav-container">
-      <div class="navbar-title">
-        <span class="navbar-heading">CryptoSim</span>
-      </div>
-      <div class="auth-links">
-        {% if username %}
-        <div class="user-dropdown">
-          <button class="dropbtn" aria-expanded="false">{{ username }}</button>
-          <div class="dropdown-content" aria-hidden="true">
-            <a href="/profile" class="drop-down-profile">Profile</a>
-            <form action="/logout" method="post"><button type="submit">Logout</button></form>
-          </div>
+    <!-- Navbar -->
+    <div class="navbar">
+        <div class="nav-container">
+            <div class="navbar-title">
+                <span class="navbar-heading">CryptoSim</span>
+            </div>
+            <div class="auth-links">
+                {% if username %}
+                  <div class="user-dropdown">
+                      <button class="dropbtn">{{ username }}</button>
+                      <div class="dropdown-content">
+                        <a href="/profile" class="drop-down-profile">Profile</a>
+                        <form action="/logout" method="post" style="margin:0;">
+                          <button type="submit" style="width:100%;border:none;background:none;color:#fff;cursor:pointer;padding:12px 16px;text-align:left;">Logout</button>
+                        </form>
+                      </div>
+                  </div>
+                {% else %}
+                  <a class="login-dashboard" href="/login">Login</a>
+                  <a class="signup-dashboard" href="/signup">Signup</a>
+                {% endif %}
+            </div>
         </div>
+        <ul class="nav-tabs">
+            <li class="tab-link active" data-tab="dashboard">Dashboard</li>
+            <li class="tab-link" data-tab="balances">Balances</li>
+            <li class="tab-link" data-tab="search">Search</li>
+            <li class="tab-link" data-tab="transactions">Transactions</li>
+            <li class="tab-link" data-tab="pending">Pending Transactions</li>
+            <li class="tab-link" data-tab="mine">Mine</li>
+        </ul>
+    </div>
+
+    <div class="tab-content">
+      <!-- Dashboard Tab -->
+      <div class="tab-pane active" id="dashboard">
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            {% for msg in messages %}
+              <div class="flash-message">{{ msg }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+        {% if username %}
+        <form class="send-form" method="POST" action="/send">
+            <h2 class="form-title">Send Amount</h2>
+            <label>Enter Recipient's Unique Code:
+              <input class="form-input" name="recipient_code" placeholder="Recipient Code" required />
+            </label>
+            <label>Enter the Amount to Send:
+              <input class="form-input" name="amount" type="number" min="0.01" step="0.01" placeholder="Amount (e.g. 10.00)" required />
+            </label>
+            <label>Transaction Password:
+              <input class="form-input" name="tx_password" type="password" placeholder="Transaction Password" required />
+            </label>
+            <button type="submit" class="form-button">Send</button>
+        </form>
         {% else %}
-        <a class="login-dashboard" href="/login">Login</a>
-        <a class="signup-dashboard" href="/signup">Signup</a>
+          <div class="faint" style="text-align:center;margin:2em 0 0">
+            Please <a href="/login">login</a> or <a href="/signup">signup</a> to use the platform.
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Balances Tab -->
+      <div class="tab-pane" id="balances">
+        <h2 style="text-align: center; font-size: 2rem; margin-top: 0; margin-bottom: 2rem;">Balances</h2>
+        <div id="balanceList">Loading balances...</div>
+      </div>
+
+      <!-- Search Tab -->
+      <div class="tab-pane" id="search">
+        <h2>Search Blockchain / Transactions</h2>
+        <form id="searchForm" class="search-form" autocomplete="off">
+            <label>Search By:</label>
+            <select id="searchType" name="searchType">
+                <option value="block">Block Index</option>
+                <option value="hash">Hash Code</option>
+                <option value="code">Unique Code</option>
+            </select>
+            <label>Enter Search Value:</label>
+            <input type="text" id="searchInput" name="q" placeholder="e.g. Block index, hash, your code..." autocomplete="off" required />
+            <button type="submit" class="form-button">Search</button>
+        </form>
+        <pre id="searchResults" style="white-space: pre-wrap; margin-top: 1em;"></pre>
+      </div>
+
+      <!-- Transaction Explorer Tab -->
+      <div class="tab-pane" id="transactions">
+        <h2>Blockchain Explorer</h2>
+        <div id="blockchain-visual">Loading blockchain...</div>
+      </div>
+
+      <!-- Pending Transactions -->
+      <div class="tab-pane" id="pending">
+        <h2>Pending Transactions</h2>
+        <div id="pendingTxList">Loading pending transactions...</div>
+      </div>
+
+      <!-- Mining Tab -->
+      <div class="tab-pane" id="mine">
+        <h2>Mine Block</h2>
+        {% if username %}
+          <button class="mine-btn form-button" type="button">Mine Block (Earn 10 SIM)</button>
+        {% else %}
+          <div class="faint" style="margin:1.5em 0 0 0">
+            Please <a href="/login">login</a> to mine blocks.
+          </div>
         {% endif %}
       </div>
     </div>
-    <ul class="nav-tabs">
-      <li class="tab-link active" data-tab="dashboard">Dashboard</li>
-      <li class="tab-link" data-tab="balances">Balances</li>
-      <li class="tab-link" data-tab="search">Search</li>
-      <li class="tab-link" data-tab="transactions">Transactions</li>
-      <li class="tab-link" data-tab="pending">Pending Transactions</li>
-      <li class="tab-link" data-tab="mine">Mine</li>
-    </ul>
-  </div>
 
-  <div class="tab-content">
-    <!-- Dashboard Tab -->
-    <div class="tab-pane active" id="dashboard">
-      {% with messages = get_flashed_messages() %}
-      {% if messages %}
-      {% for msg in messages %}
-      <div class="flash-message">{{ msg }}</div>
-      {% endfor %}
-      {% endif %}
-      {% endwith %}
-      {% if username %}
-      <form class="send-form" method="POST" action="/send">
-        <h2 class="form-title">Send SIM</h2>
-        <label>Enter Recipient's Unique Code: <input class="form-input" name="recipient_code"
-            placeholder="Recipient Code"></label>
-        <label>Enter the Amount to Send: <input class="form-input" name="amount" type="number"
-            placeholder="Amount (e.g. 10.00)" min="0.01" step="0.01"></label>
-        <label>Transaction Password: <input class="form-input" name="tx_password" type="password"
-            placeholder="Transaction Password"></label>
-        <button type="submit" class="form-button">Send</button>
-      </form>
-      {% else %}
-      <div class="faint" style="text-align:center;margin:2em 0 0">Please <a href="/login">login</a> or <a
-          href="/signup">signup</a> to use the platform.</div>
-      {% endif %}
+    <!-- Block Details Modal -->
+    <div id="blockDetailModal" class="modal" tabindex="-1">
+      <div class="modal-content">
+        <button class="close" aria-label="Close block details" onclick="closeBlockModal()">&times;</button>
+        <div id="blockDetailContent"></div>
+      </div>
     </div>
-    <!-- Balances Tab -->
-    <div class="tab-pane" id="balances">
-      <h2>Balances</h2>
-      <div id="balanceList">Loading balances...</div>
-    </div>
-    <!-- Search Tab -->
-    <div class="tab-pane" id="search">
-      <h2>Search Blockchain / Transactions</h2>
-      <form id="searchForm" class="search-form" autocomplete="off">
-        <label>Search By:</label>
-        <select id="searchType" name="searchType">
-          <option value="block">Block Index</option>
-          <option value="hash">Hash Code</option>
-          <option value="code">Unique Code</option>
-        </select>
-        <label>Enter Search Value:</label>
-        <input type="text" id="searchInput" name="q" placeholder="e.g. Block index, hash, your code..."
-          autocomplete="off">
-        <button type="submit" class="form-button">Search</button>
-      </form>
-      <div id="searchResults"></div>
-    </div>
-    <!-- Transaction Explorer Tab (Interactive Blockchain) -->
-    <div class="tab-pane" id="transactions">
-      <h2>Blockchain Explorer</h2>
-      <div id="blockchain-visual" style="margin-bottom:1.5em;">Loading blockchain...</div>
-    </div>
-    <!-- Pending Transactions -->
-    <div class="tab-pane" id="pending">
-      <h2>Pending Transactions</h2>
-      <div id="pendingTxList">Loading pending transactions...</div>
-    </div>
-    <!-- Mining Tab -->
-    <div class="tab-pane" id="mine">
-      <h2>Mine Block</h2>
-      {% if username %}
-      <button class="mine-btn form-button" type="button">Mine Block (Earn 10 SIM)</button>
-      {% else %}
-      <div class="faint" style="margin:1.5em 0 0 0">Please <a href="/login">login</a> to mine blocks.</div>
-      {% endif %}
-    </div>
-  </div>
 
-  <!-- MODALS: Block Details & Mining -->
-  <!-- Block Details Modal -->
-  <div id="blockDetailModal" class="modal">
-    <div class="modal-content">
-      <span class="close" onclick="closeBlockModal()">&times;</span>
-      <div id="blockDetailContent"></div>
+    <!-- Mining Modal -->
+    <div id="miningModal" class="modal" tabindex="-1">
+      <div class="modal-content mining-modal">
+        <button class="close" aria-label="Close mining modal" onclick="closeMiningModal()">&times;</button>
+        <div id="miningStatus"></div>
+      </div>
     </div>
-  </div>
-  <!-- Mining Modal -->
-  <div id="miningModal" class="modal">
-    <div class="modal-content mining-modal">
-      <span class="close" onclick="closeMiningModal()">&times;</span>
-      <div id="miningStatus"></div>
-    </div>
-  </div>
-  <!-- Scripts -->
-  <script src="{{ url_for('static', filename='script.js') }}"></script>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
-
 </html>

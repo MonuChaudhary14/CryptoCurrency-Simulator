@@ -48,8 +48,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Clear all active tabs and panes
   function clearActive() {
-    tabs.forEach(t => t.classList.remove('active'));
-    panes.forEach(p => p.classList.remove('active'));
+    tabs.forEach(t => {
+      t.classList.remove('active');
+      t.setAttribute('aria-selected', 'false');
+      t.setAttribute('tabindex', '-1');
+    });
+    panes.forEach(p => {
+      p.classList.remove('active');
+      p.setAttribute('aria-hidden', 'true');
+      p.setAttribute('tabindex', '-1');
+    });
   }
 
   // Show selected tab and load data if needed
@@ -59,7 +67,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const pane = document.getElementById(tabID);
     if (tab && pane) {
       tab.classList.add('active');
+      tab.setAttribute('aria-selected', 'true');
+      tab.setAttribute('tabindex', '0');
+      tab.focus();
       pane.classList.add('active');
+      pane.setAttribute('aria-hidden', 'false');
+      pane.setAttribute('tabindex', '0');
+
       switch (tabID) {
         case 'balances':
           await fetchBalances();
@@ -82,12 +96,31 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  // Keyboard accessibility for tabs
+  tabs.forEach(tab => {
+    tab.addEventListener('keydown', e => {
+      let index = Array.from(tabs).indexOf(tab);
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        let next = tabs[(index + 1) % tabs.length];
+        next.focus();
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        let prev = tabs[(index - 1 + tabs.length) % tabs.length];
+        prev.focus();
+      } else if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        showTab(tab.dataset.tab);
+      }
+    });
+  });
+
   // Initialize first active tab on page load
   const initialTab = document.querySelector(".tab-link.active");
   if (initialTab) showTab(initialTab.dataset.tab);
 
   // --- Fetch and display balances as a table ---
-  async function fetchBalances() {
+async function fetchBalances() {
     const container = document.getElementById('balanceList');
     if (!container) return;
     container.textContent = 'Loading balances...';
@@ -95,13 +128,12 @@ document.addEventListener("DOMContentLoaded", () => {
       const res = await fetch('/balances');
       if (!res.ok) throw new Error('Failed to load balances');
       const data = await res.json();
-      // data is assumed to be a dictionary {code: balance}
-      let html = `<table class="balances-table"><thead><tr><th>Unique ID</th><th>Balance (SIM)</th></tr></thead><tbody>`;
+      let html = `<table class="balances-table"><thead><tr><th>Unique ID</th><th style="text-align: left;">Balance (SIM)</th></tr></thead><tbody>`;
       if (Object.keys(data).length === 0) {
         html += `<tr><td colspan="2" style="text-align:center;">No balances found.</td></tr>`;
       } else {
         for (const [code, balance] of Object.entries(data)) {
-          html += `<tr><td>${code}</td><td>${balance.toFixed(2)}</td></tr>`;
+          html += `<tr><td>${code}</td><td style="text-align: left;">${balance.toFixed(2)}</td></tr>`;
         }
       }
       html += `</tbody></table>`;
@@ -109,7 +141,8 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (err) {
       container.textContent = 'Error loading balances.';
     }
-  }
+}
+
 
   // --- Fetch and display pending transactions ---
   async function fetchPendingTransactions() {
@@ -117,9 +150,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!container) return;
     container.textContent = 'Loading pending transactions...';
     try {
-      const res = await fetch('/pending');
+      const res = await fetch('/pending_transactions');
       if (!res.ok) throw new Error('Failed to load pending transactions');
-      const data = await res.json(); // Expected array of transactions
+      const data = await res.json();
       if (!Array.isArray(data) || data.length === 0) {
         container.textContent = 'No pending transactions.';
         return;
@@ -142,20 +175,18 @@ document.addEventListener("DOMContentLoaded", () => {
     container.textContent = "Loading blockchain...";
     try {
       const res = await fetch('/chain');
-      if (!res.ok) throw new Error('Failed to load chain');
+      if (!res.ok) throw new Error('Failed to load blockchain');
       const blockchain = await res.json();
       if (!Array.isArray(blockchain) || blockchain.length === 0) {
         container.textContent = "No blockchain data.";
         return;
       }
-      // Render chain horizontally with clickable blocks and arrows
       let html = `<div class="blockchain-chain" role="list">`;
       blockchain.forEach((block, idx) => {
         html += `
           <div class="block-box" role="listitem" tabindex="0" data-index="${block.index}" aria-label="Click to view details of block #${block.index}">
             ${block.index === 0 ? "Genesis" : "Block"}<br>#${block.index}
-          </div>
-        `;
+          </div>`;
         if (idx !== blockchain.length - 1) {
           html += `<span class="chain-arrow" aria-hidden="true">&#8594;</span>`;
         }
@@ -163,23 +194,25 @@ document.addEventListener("DOMContentLoaded", () => {
       html += `</div>`;
       container.innerHTML = html;
 
-      // Add keyboard accessibility: allow Enter/Space to open block details
       container.querySelectorAll('.block-box').forEach(box => {
+        box.addEventListener('click', () => {
+          showBlockDetail(parseInt(box.dataset.index, 10));
+        });
+        // Keyboard accessibility for Enter and Space
         box.addEventListener('keydown', e => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            showBlockDetail(parseInt(box.dataset.index));
+            showBlockDetail(parseInt(box.dataset.index, 10));
           }
         });
       });
-
     } catch (err) {
       container.textContent = "Failed to load blockchain.";
     }
   }
 
   // --- Show block details modal ---
-  window.showBlockDetail = async function (index) {
+  window.showBlockDetail = async function(index) {
     const modal = document.getElementById("blockDetailModal");
     const content = document.getElementById('blockDetailContent');
     content.innerHTML = "Loading...";
@@ -191,20 +224,20 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
       const block = await res.json();
-      // Display block details nicely formatted
+
       let details = `
-        <h3>Block #${block.index}</h3>
+        <h3 id="blockDetailTitle">Block #${block.index}</h3>
         <p><strong>Hash:</strong> <span class="hash-display">${block.hash}</span></p>
         <p><strong>Previous Hash:</strong> <span class="hash-display">${block.previous_hash}</span></p>
         <p><strong>Nonce:</strong> ${block.nonce}</p>
         <p><strong>Miner:</strong> ${block.miner}</p>
         <p><strong>Timestamp:</strong> ${new Date(block.timestamp * 1000).toLocaleString()}</p>
-        <p><strong>Mining Time:</strong> ${block.mining_time ? block.mining_time.toFixed(2) + 's' : 'N/A'}</p>
+        <p><strong>Mining Time:</strong> ${block.mining_time ? block.mining_time.toFixed(2) + ' s' : 'N/A'}</p>
         <h4>Transactions (${block.transactions.length}):</h4>
         <ul>
           ${block.transactions.map(tx =>
-        `<li>From ${tx.sender_code || 'System'} to ${tx.recipient_code} : ${tx.amount ?? ''} SIM</li>`
-      ).join('')}
+            `<li>From ${tx.sender_code || 'System'} to ${tx.recipient_code}: ${tx.amount ?? ''} SIM</li>`
+          ).join('')}
         </ul>
       `;
       content.innerHTML = details;
@@ -214,7 +247,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   // Close block detail modal
-  window.closeBlockModal = function () {
+  window.closeBlockModal = function() {
     document.getElementById("blockDetailModal").style.display = "none";
   };
 
@@ -224,7 +257,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // --- Mining Modal Logic ---
-  window.mineBlock = async function () {
+  window.mineBlock = async function() {
     const modal = document.getElementById('miningModal');
     const statusDiv = document.getElementById('miningStatus');
     statusDiv.innerHTML = "<strong>Preparing mining challenge...</strong>";
@@ -239,15 +272,14 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      // Mining animation variables
       let nonce = 0;
       let hash = "";
       let running = true;
 
-      // Animation loop - updates every ~90ms
       const animate = () => {
         if (!running) return;
         nonce += Math.floor(Math.random() * 32) + 1;
+        // Fake hash for visual effect
         hash = sha256(meta.index + meta.previous_hash + nonce + "simulate");
         statusDiv.innerHTML = `
           <div>
@@ -262,7 +294,7 @@ document.addEventListener("DOMContentLoaded", () => {
       };
       animate();
 
-      // Actual mining request (blocks until mined)
+      // Actual mining request (wait for completion)
       const mined = await fetch('/mine', { method: "POST" });
       running = false;
       const result = await mined.json();
@@ -288,24 +320,23 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   // Close mining modal
-  window.closeMiningModal = function () {
+  window.closeMiningModal = function() {
     document.getElementById('miningModal').style.display = 'none';
   };
 
-  // Simple sha256 function for animated fake hashes (not cryptographic, for UI only)
+  // Simple sha256 for animation (fake hash)
   function sha256(str) {
-    // Returns random 64 hex chars string for animation only
     return Array(64).fill(0).map(() =>
       "0123456789abcdef"[Math.floor(Math.random() * 16)]
     ).join("");
   }
 
-  // Attach mining button logic if present initially
+  // Attach mining button click
   document.querySelectorAll('.mine-btn').forEach(btn =>
     btn.addEventListener('click', window.mineBlock)
   );
 
-  // --- Search Tab functionality (optional) ---
+  // --- Search functionality ---
   const searchForm = document.getElementById('searchForm');
   if (searchForm) {
     searchForm.addEventListener('submit', async (e) => {
@@ -322,7 +353,6 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         let endpoint = '';
         if (type === 'block') {
-          // Search by block index
           endpoint = `/block/${encodeURIComponent(query)}`;
         } else if (type === 'hash') {
           endpoint = `/search_hash/${encodeURIComponent(query)}`;
@@ -340,7 +370,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         const data = await res.json();
-        // Simple output formatting (can be improved)
         resultsDiv.textContent = JSON.stringify(data, null, 2);
       } catch (err) {
         resultsDiv.textContent = 'Search error.';
