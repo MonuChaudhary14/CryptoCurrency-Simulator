@@ -6,33 +6,32 @@ import time
 from pymongo import MongoClient
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key'  # Change this to a strong secret key
+app.secret_key = 'secret-key'  
 
-# --- Database Setup ---
+
+
+
 client = MongoClient("mongodb://localhost:27017")
 db = client['cryptosim_db']
 users = db['users']
 blockchain = db['blockchain']
 pending_transactions = db['pending_transactions']
 
-DIFFICULTY = 4  # Mining difficulty: how many leading zeroes required in block hash
+DIFFICULTY = 5  
 
-# --- Helper Functions ---
+
+
 
 def hash_password(password):
-    """Hash a password with SHA-256."""
     return hashlib.sha256(password.encode()).hexdigest()
 
 def get_user_by_username(username):
-    """Retrieve user document by username."""
     return users.find_one({"username": username})
 
 def get_user_by_code(code):
-    """Retrieve user document by unique code."""
     return users.find_one({"unique_code": code})
 
 def get_last_block():
-    """Get the latest block in the blockchain; create genesis block if empty."""
     block = blockchain.find_one(sort=[("index", -1)])
     if block:
         return block
@@ -51,7 +50,6 @@ def get_last_block():
         return genesis
 
 def proof_of_work(index, previous_hash, transactions):
-    """Performs proof-of-work algorithm."""
     nonce = 0
     start_time = time.time()
     tx_string = json.dumps(transactions, sort_keys=True)
@@ -64,16 +62,20 @@ def proof_of_work(index, previous_hash, transactions):
         nonce += 1
 
 def get_user_balance(user_code):
-    """Get user's balance, accounting for pending outgoing transactions."""
     user = get_user_by_code(user_code)
     if not user:
         return 0
-    pending_amount = sum(
-        tx['amount'] for tx in pending_transactions.find({'sender_code': user_code, 'status': 'pending'})
-    )
+    pending_txs = pending_transactions.find({
+        'sender_code': user_code,
+        'status': 'pending'
+    })
+
+    pending_amount = 0
+    for tx in pending_txs:
+        pending_amount += tx['amount']
+
     return user.get('balance', 0) - pending_amount
 
-# --- Simple login_required decorator ---
 
 def login_required(func):
     def wrapper(*args, **kwargs):
@@ -81,16 +83,18 @@ def login_required(func):
             flash("Please login first.")
             return redirect(url_for('login'))
         return func(*args, **kwargs)
-    wrapper.__name__ = func.__name__  # preserve original function name for Flask
+    wrapper.__name__ = func.__name__  
     return wrapper
 
-# --- Flask Routes ---
+
 
 @app.route('/')
 def index():
     username = session.get('username')
     user_list = list(users.find({}, {"_id": 0, "password_hash": 0, "tx_password_hash": 0}))
-    users_dict = {u['username']: u for u in user_list}
+    users_dict = {}
+    for u in user_list:
+        users_dict[u['username']] = u
     return render_template('index.html', username=username, users=users_dict)
 
 @app.route('/signup', methods=['GET', 'POST'])
@@ -121,7 +125,7 @@ def signup():
             "password_hash": hash_password(password),
             "tx_password_hash": hash_password(tx_password),
             "unique_code": unique_code,
-            "balance": 50.0,  # Initial balance
+            "balance": 50.0,  
             "created_at": time.time()
         }
         users.insert_one(user_doc)
@@ -188,7 +192,6 @@ def send():
         flash("Insufficient funds considering pending transactions.")
         return redirect(url_for('index'))
 
-    # Insert new pending transaction
     pending_transactions.insert_one({
         'sender_code': sender['unique_code'],
         'recipient_code': recipient_code,
@@ -250,17 +253,25 @@ def mine():
     last_block = get_last_block()
     new_index = last_block['index'] + 1
 
-    tx_list = [{k: v for k, v in tx.items() if k != '_id'} for tx in valid_txs]
+    tx_list = []
+    for tx in valid_txs:
+        tx_copy = tx.copy()
+        tx_copy.pop('_id', None)
+        tx_list.append(tx_copy)
+
 
     nonce, hash_result, mining_time = proof_of_work(new_index, last_block['hash'], tx_list)
 
-    # Update balances and transaction status
     for tx in valid_txs:
-        users.update_one({'unique_code': tx['sender_code']}, {'$inc': {'balance': -tx['amount']}})
-        users.update_one({'unique_code': tx['recipient_code']}, {'$inc': {'balance': tx['amount']}})
+        sender_code = tx['sender_code']
+        recipient_code = tx['recipient_code']
+        amount = tx['amount']
+
+        users.update_one({'unique_code': sender_code}, {'$inc': {'balance': -amount}})
+        users.update_one({'unique_code': recipient_code}, {'$inc': {'balance': amount}})
         pending_transactions.update_one({'_id': tx['_id']}, {'$set': {'status': 'confirmed'}})
 
-    # Reward miner with 10 SIM coins
+
     users.update_one({'username': miner_username}, {'$inc': {'balance': 10}})
 
     new_block = {
@@ -359,19 +370,16 @@ def search_transactions():
     q = request.args.get('q', '').strip()
     my_code = get_user_by_username(session['username'])['unique_code']
 
-    # Block search by index
     if q.isdigit():
         block = blockchain.find_one({"index": int(q)}, {"_id": 0})
         if block:
             return jsonify({'block': block})
 
-    # Block search by full 64-char hash
     if len(q) == 64 and all(c in "0123456789abcdefABCDEF" for c in q):
         block = blockchain.find_one({"hash": q}, {"_id": 0})
         if block:
             return jsonify({'block': block})
 
-    # Transaction search (sender or recipient matches, or amount if numeric)
     or_conditions = [
         {'sender_code': {'$regex': q, '$options': 'i'}},
         {'recipient_code': {'$regex': q, '$options': 'i'}}
@@ -395,7 +403,7 @@ def search_transactions():
     results = list(pending_transactions.find(query, {'_id': 0}))
     return jsonify({'transactions': results})
 
-# --- Main ---
+
 
 if __name__ == '__main__':
     app.run(debug=True)

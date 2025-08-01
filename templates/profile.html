@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <title>CryptoSim - Profile</title>
   <style>
-    /* Body and font */
+    /* Body and fontt */
     body {
       margin: 0;
       padding: 0;
@@ -321,7 +321,7 @@
   </main>
 
   <script>
-    // Dropdown toggle logic
+
     document.addEventListener("DOMContentLoaded", () => {
       const dropdown = document.getElementById('dropdownMenu');
       const dropbtn = document.getElementById('dropbtn');
@@ -336,22 +336,12 @@
           dropdown.classList.toggle('show');
         });
 
-        // Close dropdown when clicking outside
+
         document.addEventListener('click', () => {
           if (dropdown.classList.contains('show')) {
             dropdown.classList.remove('show');
             dropbtn.setAttribute('aria-expanded', false);
             dropdown.setAttribute('aria-hidden', true);
-          }
-        });
-
-        // Close dropdown with Escape key
-        document.addEventListener('keydown', e => {
-          if (e.key === "Escape" && dropdown.classList.contains('show')) {
-            dropdown.classList.remove('show');
-            dropbtn.setAttribute('aria-expanded', false);
-            dropdown.setAttribute('aria-hidden', true);
-            dropbtn.focus();
           }
         });
       }

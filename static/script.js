@@ -120,7 +120,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (initialTab) showTab(initialTab.dataset.tab);
 
   // --- Fetch and display balances as a table ---
-async function fetchBalances() {
+  async function fetchBalances() {
     const container = document.getElementById('balanceList');
     if (!container) return;
     container.textContent = 'Loading balances...';
@@ -141,7 +141,7 @@ async function fetchBalances() {
     } catch (err) {
       container.textContent = 'Error loading balances.';
     }
-}
+  }
 
 
   // --- Fetch and display pending transactions ---
@@ -212,7 +212,7 @@ async function fetchBalances() {
   }
 
   // --- Show block details modal ---
-  window.showBlockDetail = async function(index) {
+  window.showBlockDetail = async function (index) {
     const modal = document.getElementById("blockDetailModal");
     const content = document.getElementById('blockDetailContent');
     content.innerHTML = "Loading...";
@@ -236,8 +236,8 @@ async function fetchBalances() {
         <h4>Transactions (${block.transactions.length}):</h4>
         <ul>
           ${block.transactions.map(tx =>
-            `<li>From ${tx.sender_code || 'System'} to ${tx.recipient_code}: ${tx.amount ?? ''} SIM</li>`
-          ).join('')}
+        `<li>From ${tx.sender_code || 'System'} to ${tx.recipient_code}: ${tx.amount ?? ''} SIM</li>`
+      ).join('')}
         </ul>
       `;
       content.innerHTML = details;
@@ -247,7 +247,7 @@ async function fetchBalances() {
   };
 
   // Close block detail modal
-  window.closeBlockModal = function() {
+  window.closeBlockModal = function () {
     document.getElementById("blockDetailModal").style.display = "none";
   };
 
@@ -257,7 +257,7 @@ async function fetchBalances() {
   });
 
   // --- Mining Modal Logic ---
-  window.mineBlock = async function() {
+  window.mineBlock = async function () {
     const modal = document.getElementById('miningModal');
     const statusDiv = document.getElementById('miningStatus');
     statusDiv.innerHTML = "<strong>Preparing mining challenge...</strong>";
@@ -320,7 +320,7 @@ async function fetchBalances() {
   };
 
   // Close mining modal
-  window.closeMiningModal = function() {
+  window.closeMiningModal = function () {
     document.getElementById('miningModal').style.display = 'none';
   };
 
