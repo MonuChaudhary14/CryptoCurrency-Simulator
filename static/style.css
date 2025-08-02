@@ -590,3 +590,19 @@ button:hover {
   transform: translateY(-6px) scale(1.07);
   outline: none;
 }
+
+.search-result-block {
+  background: linear-gradient(90deg, #1e293b 80%, #3b82f6 130%);
+  color: #fff;
+  border-radius: 12px;
+  padding: 20px 18px;
+  margin: 16px 0;
+  box-shadow: 0 2px 18px #0004;
+  font-size: 1.05rem;
+  border-left: 7px solid #fbbf24;
+}
+
+.search-result-block h3, .search-result-block h4 {
+  margin-top: 0;
+  color: #fbbf24;
+}

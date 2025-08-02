@@ -1,13 +1,9 @@
 document.addEventListener("DOMContentLoaded", () => {
-  // Tab elements and content panes
   const tabs = document.querySelectorAll(".tab-link");
   const panes = document.querySelectorAll(".tab-pane");
+  const dropdown = document.querySelector(".dropdown-content");
+  const dropbtn = document.querySelector(".dropbtn");
 
-  // Username dropdown elements
-  const dropdown = document.querySelector(".user-dropdown .dropdown-content");
-  const dropbtn = document.querySelector(".user-dropdown .dropbtn");
-
-  // Flash messages auto-hide
   document.querySelectorAll('.flash-message').forEach(flash => {
     setTimeout(() => {
       flash.classList.add('fade-out');
@@ -15,65 +11,35 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 3000);
   });
 
-  // Username dropdown toggle
   if (dropbtn && dropdown) {
     dropbtn.addEventListener('click', e => {
       e.stopPropagation();
-      const expanded = dropbtn.getAttribute('aria-expanded') === 'true';
-      dropbtn.setAttribute('aria-expanded', !expanded);
-      const isHidden = dropdown.getAttribute('aria-hidden') === 'true';
-      dropdown.setAttribute('aria-hidden', !isHidden);
       dropdown.classList.toggle('show');
     });
-
-    // Hide dropdown on outside click
     document.addEventListener('click', () => {
-      if (dropdown.classList.contains('show')) {
-        dropdown.classList.remove('show');
-        dropbtn.setAttribute('aria-expanded', false);
-        dropdown.setAttribute('aria-hidden', true);
-      }
+      dropdown.classList.remove('show');
     });
-
-    // Hide dropdown on Escape key
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && dropdown.classList.contains('show')) {
         dropdown.classList.remove('show');
-        dropbtn.setAttribute('aria-expanded', false);
-        dropdown.setAttribute('aria-hidden', true);
         dropbtn.focus();
       }
     });
   }
 
-  // Clear all active tabs and panes
   function clearActive() {
-    tabs.forEach(t => {
-      t.classList.remove('active');
-      t.setAttribute('aria-selected', 'false');
-      t.setAttribute('tabindex', '-1');
-    });
-    panes.forEach(p => {
-      p.classList.remove('active');
-      p.setAttribute('aria-hidden', 'true');
-      p.setAttribute('tabindex', '-1');
-    });
+    tabs.forEach(t => t.classList.remove('active'));
+    panes.forEach(p => p.classList.remove('active'));
   }
 
-  // Show selected tab and load data if needed
   async function showTab(tabID) {
     clearActive();
     const tab = document.querySelector(`.tab-link[data-tab="${tabID}"]`);
     const pane = document.getElementById(tabID);
     if (tab && pane) {
       tab.classList.add('active');
-      tab.setAttribute('aria-selected', 'true');
-      tab.setAttribute('tabindex', '0');
       tab.focus();
       pane.classList.add('active');
-      pane.setAttribute('aria-hidden', 'false');
-      pane.setAttribute('tabindex', '0');
-
       switch (tabID) {
         case 'balances':
           await fetchBalances();
@@ -84,30 +50,20 @@ document.addEventListener("DOMContentLoaded", () => {
         case 'pending':
           await fetchPendingTransactions();
           break;
-        // No auto load for search and mine tabs
       }
     }
   }
 
-  // Attach click events to tabs
   tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      showTab(tab.dataset.tab);
-    });
-  });
-
-  // Keyboard accessibility for tabs
-  tabs.forEach(tab => {
+    tab.addEventListener('click', () => showTab(tab.dataset.tab));
     tab.addEventListener('keydown', e => {
       let index = Array.from(tabs).indexOf(tab);
       if (e.key === 'ArrowRight') {
         e.preventDefault();
-        let next = tabs[(index + 1) % tabs.length];
-        next.focus();
+        tabs[(index + 1) % tabs.length].focus();
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        let prev = tabs[(index - 1 + tabs.length) % tabs.length];
-        prev.focus();
+        tabs[(index - 1 + tabs.length) % tabs.length].focus();
       } else if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         showTab(tab.dataset.tab);
@@ -115,18 +71,16 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Initialize first active tab on page load
   const initialTab = document.querySelector(".tab-link.active");
   if (initialTab) showTab(initialTab.dataset.tab);
 
-  // --- Fetch and display balances as a table ---
   async function fetchBalances() {
     const container = document.getElementById('balanceList');
     if (!container) return;
     container.textContent = 'Loading balances...';
     try {
       const res = await fetch('/balances');
-      if (!res.ok) throw new Error('Failed to load balances');
+      if (!res.ok) throw new Error();
       const data = await res.json();
       let html = `<table class="balances-table"><thead><tr><th>Unique ID</th><th style="text-align: left;">Balance (SIM)</th></tr></thead><tbody>`;
       if (Object.keys(data).length === 0) {
@@ -143,15 +97,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-
-  // --- Fetch and display pending transactions ---
   async function fetchPendingTransactions() {
     const container = document.getElementById('pendingTxList');
     if (!container) return;
     container.textContent = 'Loading pending transactions...';
     try {
       const res = await fetch('/pending_transactions');
-      if (!res.ok) throw new Error('Failed to load pending transactions');
+      if (!res.ok) throw new Error();
       const data = await res.json();
       if (!Array.isArray(data) || data.length === 0) {
         container.textContent = 'No pending transactions.';
@@ -168,7 +120,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // --- Blockchain Explorer Visualization ---
   async function loadBlockchainVisual() {
     const container = document.getElementById('blockchain-visual');
     if (!container) return;
@@ -193,12 +144,10 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       html += `</div>`;
       container.innerHTML = html;
-
       container.querySelectorAll('.block-box').forEach(box => {
         box.addEventListener('click', () => {
           showBlockDetail(parseInt(box.dataset.index, 10));
         });
-        // Keyboard accessibility for Enter and Space
         box.addEventListener('keydown', e => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
@@ -212,7 +161,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // --- Show block details modal ---
-  window.showBlockDetail = async function (index) {
+  window.showBlockDetail = async function(index) {
     const modal = document.getElementById("blockDetailModal");
     const content = document.getElementById('blockDetailContent');
     content.innerHTML = "Loading...";
@@ -224,7 +173,6 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
       const block = await res.json();
-
       let details = `
         <h3 id="blockDetailTitle">Block #${block.index}</h3>
         <p><strong>Hash:</strong> <span class="hash-display">${block.hash}</span></p>
@@ -236,8 +184,8 @@ document.addEventListener("DOMContentLoaded", () => {
         <h4>Transactions (${block.transactions.length}):</h4>
         <ul>
           ${block.transactions.map(tx =>
-        `<li>From ${tx.sender_code || 'System'} to ${tx.recipient_code}: ${tx.amount ?? ''} SIM</li>`
-      ).join('')}
+            `<li>From ${tx.sender_code || 'System'} to ${tx.recipient_code}: ${tx.amount ?? ''} SIM</li>`
+          ).join('')}
         </ul>
       `;
       content.innerHTML = details;
@@ -247,7 +195,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   // Close block detail modal
-  window.closeBlockModal = function () {
+  window.closeBlockModal = function() {
     document.getElementById("blockDetailModal").style.display = "none";
   };
 
@@ -257,21 +205,19 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // --- Mining Modal Logic ---
-  window.mineBlock = async function () {
+  window.mineBlock = async function() {
     const modal = document.getElementById('miningModal');
     const statusDiv = document.getElementById('miningStatus');
     statusDiv.innerHTML = "<strong>Preparing mining challenge...</strong>";
     modal.style.display = "flex";
 
     try {
-      // Fetch mining challenge metadata for animation
       const resp = await fetch('/mine_progress');
       const meta = await resp.json();
       if (meta.error) {
         statusDiv.innerHTML = `<span style="color: #fa5;">${meta.error}</span>`;
         return;
       }
-
       let nonce = 0;
       let hash = "";
       let running = true;
@@ -279,7 +225,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const animate = () => {
         if (!running) return;
         nonce += Math.floor(Math.random() * 32) + 1;
-        // Fake hash for visual effect
         hash = sha256(meta.index + meta.previous_hash + nonce + "simulate");
         statusDiv.innerHTML = `
           <div>
@@ -293,12 +238,9 @@ document.addEventListener("DOMContentLoaded", () => {
         setTimeout(animate, 90);
       };
       animate();
-
-      // Actual mining request (wait for completion)
       const mined = await fetch('/mine', { method: "POST" });
       running = false;
       const result = await mined.json();
-
       if (result.success) {
         let seconds = result.mining_time.toFixed(2);
         statusDiv.innerHTML = `
@@ -319,24 +261,21 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  // Close mining modal
-  window.closeMiningModal = function () {
+  window.closeMiningModal = function() {
     document.getElementById('miningModal').style.display = 'none';
   };
 
-  // Simple sha256 for animation (fake hash)
   function sha256(str) {
     return Array(64).fill(0).map(() =>
       "0123456789abcdef"[Math.floor(Math.random() * 16)]
     ).join("");
   }
 
-  // Attach mining button click
   document.querySelectorAll('.mine-btn').forEach(btn =>
     btn.addEventListener('click', window.mineBlock)
   );
 
-  // --- Search functionality ---
+  // --- SEARCH: Results as block instead of JSON ---
   const searchForm = document.getElementById('searchForm');
   if (searchForm) {
     searchForm.addEventListener('submit', async (e) => {
@@ -362,18 +301,61 @@ document.addEventListener("DOMContentLoaded", () => {
           resultsDiv.textContent = 'Invalid search type.';
           return;
         }
-
         const res = await fetch(endpoint);
         if (!res.ok) {
           resultsDiv.textContent = `No results found.`;
           return;
         }
-
         const data = await res.json();
-        resultsDiv.textContent = JSON.stringify(data, null, 2);
+
+        resultsDiv.innerHTML = ""; // Clear previous
+        if (data.block) displayBlock(data.block, resultsDiv);
+        else if (data.transactions && Array.isArray(data.transactions)) {
+          if (data.transactions.length === 0) {
+            resultsDiv.innerHTML = "<div class='search-result-block'>No matching transactions found.</div>";
+          } else {
+            data.transactions.forEach(tx => displayTx(tx, resultsDiv));
+          }
+        } else if (data.index !== undefined && data.hash) displayBlock(data, resultsDiv);
+        else {
+          resultsDiv.innerHTML = "<div class='search-result-block'>No structured result found.</div>";
+        }
       } catch (err) {
         resultsDiv.textContent = 'Search error.';
       }
     });
+  }
+
+  function displayBlock(block, parent) {
+    let html = `
+      <div class="search-result-block">
+        <h3>Block #${block.index}</h3>
+        <p><b>Hash:</b> <span class="hash-display">${block.hash}</span></p>
+        <p><b>Previous Hash:</b> <span class="hash-display">${block.previous_hash}</span></p>
+        <p><b>Nonce:</b> ${block.nonce}</p>
+        <p><b>Miner:</b> ${block.miner}</p>
+        <p><b>Timestamp:</b> ${block.timestamp ? new Date(block.timestamp * 1000).toLocaleString() : 'N/A'}</p>
+        <p><b>Mining Time:</b> ${block.mining_time ? block.mining_time.toFixed(2) + ' s' : 'N/A'}</p>
+        <h4>Transactions (${block.transactions.length}):</h4>
+        <ul>${block.transactions.map(tx =>
+            `<li>From ${tx.sender_code || 'System'} to ${tx.recipient_code} : ${tx.amount ?? ''} SIM</li>`).join("")}
+        </ul>
+      </div>
+    `;
+    parent.innerHTML += html;
+  }
+
+  function displayTx(tx, parent) {
+    let html = `
+      <div class="search-result-block">
+        <h4>Transaction</h4>
+        <p><b>Sender:</b> ${tx.sender_code || 'System'}</p>
+        <p><b>Recipient:</b> ${tx.recipient_code}</p>
+        <p><b>Amount:</b> ${tx.amount} SIM</p>
+        <p><b>Status:</b> ${tx.status || '-'}</p>
+        <p><b>Time:</b> ${tx.timestamp ? new Date(tx.timestamp * 1000).toLocaleString() : "-"}</p>
+      </div>
+    `;
+    parent.innerHTML += html;
   }
 });
