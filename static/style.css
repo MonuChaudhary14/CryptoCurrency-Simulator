@@ -1,12 +1,9 @@
-/* ===== Base & Layout ===== */
-
 body,
 html {
   margin: 0;
   padding: 0;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background-color: #000000;
-  /* Dark background */
   color: #eee;
   min-height: 100vh;
   overflow-x: hidden;
@@ -14,7 +11,6 @@ html {
   flex-direction: column;
 }
 
-/* ===== Navbar ===== */
 
 .navbar {
   background-color: rgba(38, 38, 38, 0.95);
@@ -48,7 +44,6 @@ html {
   color: #3b82f6;
 }
 
-/* ===== Auth Links ===== */
 
 .auth-links {
   position: relative;
@@ -75,8 +70,6 @@ html {
 .signup-dashboard:hover {
   background-color: #2563eb;
 }
-
-/* ===== Dropdown Menu ===== */
 
 .user-dropdown {
   position: relative;
@@ -157,7 +150,7 @@ html {
   background-color: #2563eb;
 }
 
-/* ===== Navigation Tabs ===== */
+
 
 .nav-tabs {
   list-style: none;
@@ -189,7 +182,6 @@ html {
   color: white;
 }
 
-/* ===== Tab Content Panes ===== */
 
 .tab-content {
   flex-grow: 1;
@@ -235,7 +227,7 @@ html {
   }
 }
 
-/* ===== Forms and Buttons ===== */
+
 
 label {
   display: block;
@@ -293,7 +285,6 @@ label {
   background-color: #2563eb;
 }
 
-/* ===== Flash Messages ===== */
 
 .flash-message {
   position: fixed;
@@ -316,7 +307,7 @@ label {
   opacity: 0;
 }
 
-/* ===== Balances Table ===== */
+
 
 .balances-table {
   width: 100%;
@@ -353,7 +344,6 @@ label {
   text-align: right;
 }
 
-/* ===== Blockchain Explorer ===== */
 
 .blockchain-chain {
   display: flex;
@@ -390,11 +380,11 @@ label {
   user-select: none;
 }
 
-/* ===== Modals ===== */
+
 
 .modal {
   display: none;
-  /* Hidden by default */
+
   position: fixed;
   z-index: 2000;
   left: 0;
@@ -443,7 +433,6 @@ label {
   outline: none;
 }
 
-/* Block detail hashes */
 .hash-display {
   font-family: 'Courier New', monospace;
   background: rgba(255, 255, 255, 0.15);
@@ -455,7 +444,7 @@ label {
   color: #fbbf24;
 }
 
-/* Mining result */
+
 .mining-result {
   background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
   padding: 20px;
@@ -469,7 +458,7 @@ label {
   margin-top: 0;
 }
 
-/* Responsive adjustments */
+
 
 @media (max-width: 768px) {
   .nav-tabs {
@@ -487,7 +476,6 @@ label {
   }
 }
 
-/* Keyboard focus outline */
 
 .block-box:focus,
 .form-button:focus,
@@ -496,7 +484,7 @@ label {
   outline-offset: 2px;
 }
 
-/* Transaction list */
+
 
 .tx-list {
   list-style: none;
@@ -512,7 +500,7 @@ label {
   margin-bottom: 6px;
 }
 
-/* Search form styling */
+
 
 .search-form label {
   display: block;
@@ -539,7 +527,6 @@ label {
   color: rgba(255, 255, 255, 0.7);
 }
 
-/* Hover effect for buttons and links */
 
 a:hover,
 button:hover {
@@ -556,13 +543,10 @@ button:hover {
   display: flex;
   align-items: center;
   gap: 20px;
-  /* More space between blocks */
   overflow-x: auto;
   margin-bottom: 50px;
   margin-top: 30px;
-  /* More space above */
   padding: 20px 0;
-  /* More space top and bottom */
 }
 
 .block-box {
@@ -572,12 +556,10 @@ button:hover {
   border-radius: 16px;
   min-width: 130px;
   min-height: 90px;
-  /* Increase height */
   cursor: pointer;
   font-weight: 700;
   text-align: center;
   font-size: 1.25rem;
-  /* Increase text size */
   transition: background 0.28s, transform 0.2s, box-shadow 0.2s;
   position: relative;
   margin-top: 12px;

@@ -194,17 +194,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  // Close block detail modal
   window.closeBlockModal = function() {
     document.getElementById("blockDetailModal").style.display = "none";
   };
 
-  // Close modal if clicked outside content
   document.addEventListener('click', e => {
     if (e.target.classList.contains('modal')) e.target.style.display = 'none';
   });
 
-  // --- Mining Modal Logic ---
   window.mineBlock = async function() {
     const modal = document.getElementById('miningModal');
     const statusDiv = document.getElementById('miningStatus');
@@ -275,7 +272,6 @@ document.addEventListener("DOMContentLoaded", () => {
     btn.addEventListener('click', window.mineBlock)
   );
 
-  // --- SEARCH: Results as block instead of JSON ---
   const searchForm = document.getElementById('searchForm');
   if (searchForm) {
     searchForm.addEventListener('submit', async (e) => {
@@ -308,7 +304,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         const data = await res.json();
 
-        resultsDiv.innerHTML = ""; // Clear previous
+        resultsDiv.innerHTML = ""; 
         if (data.block) displayBlock(data.block, resultsDiv);
         else if (data.transactions && Array.isArray(data.transactions)) {
           if (data.transactions.length === 0) {
